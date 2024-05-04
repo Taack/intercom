@@ -5,7 +5,7 @@ import grails.compiler.GrailsCompileStatic
 import org.apache.commons.io.FileUtils
 import org.springframework.beans.factory.annotation.Value
 import taack.ast.type.FieldInfo
-import taack.base.TaackJdbcService
+import taack.domain.TaackJdbcService
 import taack.ssh.SshEventRegistry
 import taack.ssh.vfs.FileCallback
 import taack.ssh.vfs.FileTree

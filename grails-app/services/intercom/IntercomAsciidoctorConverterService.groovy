@@ -323,7 +323,7 @@ class IntercomAsciidoctorConverterService {
     }
 
     final File retrieveIndexFile(final IntercomRepoDoc doc, boolean pdfMode = false) {
-        final useRevealJS = doc.kind == IntercomConfig.DocumentKind.SLIDESHOW
+        final useRevealJS = doc.kind == IntercomDocumentKind.SLIDESHOW
 
         final File indexFile = new File(docPath(doc))
         final String rpd = docRelativeDirPath(doc)

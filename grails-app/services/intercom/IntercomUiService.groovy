@@ -1,44 +1,47 @@
 package intercom
 
-import conf.IntercomConfig
-import crew.CrewUiService
+import crew.CrewController
+import crew.CrewSecurityService
 import grails.compiler.GrailsCompileStatic
 import grails.gsp.PageRenderer
 import grails.util.Pair
 import grails.web.api.WebAttributes
-import org.codehaus.groovy.runtime.MethodClosure
+import org.codehaus.groovy.runtime.MethodClosure as MC
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.MessageSource
-import org.springframework.context.i18n.LocaleContextHolder
-import taack.base.TaackSimpleFilterService
+import org.taack.User
+import taack.domain.TaackFilterService
+import taack.render.TaackUiEnablerService
 import taack.ui.base.UiFilterSpecifier
 import taack.ui.base.UiTableSpecifier
 import taack.ui.base.block.BlockSpec
 import taack.ui.base.common.ActionIcon
-import taack.ui.base.common.ActionIconStyleModifier
-import org.taack.User
+import taack.ui.base.common.IconStyle
+
+import javax.annotation.PostConstruct
+
+import static taack.render.TaackUiService.tr
 
 @GrailsCompileStatic
 class IntercomUiService implements WebAttributes {
-    MessageSource messageSource
-    TaackSimpleFilterService taackSimpleFilterService
-    CrewUiService crewUiService
+    TaackFilterService taackFilterService
+    CrewSecurityService crewSecurityService
     IntercomAsciidoctorConverterService intercomAsciidoctorConverterService
 
     @Autowired
     PageRenderer g
 
-    protected String tr(final String code, final Locale locale = null, final Object[] args = null) {
-        if (LocaleContextHolder.locale.language == "test") return code
-        try {
-            messageSource.getMessage(code, args, locale ?: LocaleContextHolder.locale)
-        } catch (e1) {
-            try {
-                messageSource.getMessage(code, args, new Locale("en"))
-            } catch (e2) {
-                code
-            }
-        }
+    private securityClosure(Long id, Map p) {
+        if (!id) return true
+        crewSecurityService.canEdit(User.read(id))
+    }
+
+    @PostConstruct
+    void init() {
+        TaackUiEnablerService.securityClosure(
+                this.&securityClosure,
+                IntercomController.&createIntercomUser as MC,
+                IntercomController.&saveIntercomUser as MC,
+                CrewController.&saveUser as MC)
     }
 
     Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomUserList(boolean selectMode = false) {
@@ -50,14 +53,13 @@ class IntercomUiService implements WebAttributes {
                 filterField iu.baseUser_, iu.baseUser.username_
                 filterField iu.baseUser_, iu.baseUser.lastName_
                 filterField iu.baseUser_, iu.baseUser.firstName_
-                filterField tr("user.manager.label"), iu.baseUser_, iu.baseUser.manager_, iu.baseUser.manager.username_
-                filterField iu.baseUser_, iu.baseUser.mainSubsidiary_
-                filterField iu.baseUser_, iu.baseUser.allowedSubsidiaries_
+                filterField iu.baseUser_, iu.baseUser.manager_, iu.baseUser.manager.username_
+                filterField iu.baseUser_, iu.baseUser.subsidiary_
                 filterField iu.baseUser_, iu.baseUser.enabled_
             }
         }
         UiTableSpecifier t = new UiTableSpecifier()
-        t.ui IntercomUser, {
+        t.ui {
             header {
                 column {
                     sortableFieldHeader iu.dateCreated_
@@ -68,31 +70,30 @@ class IntercomUiService implements WebAttributes {
                     sortableFieldHeader iu.userCreated_
                 }
                 column {
-                    sortableFieldHeader tr("user.username.label"), iu.baseUser_, iu.baseUser.username_
-                    sortableFieldHeader tr("default.mainSubsidiary.label"), iu.baseUser_, iu.baseUser.mainSubsidiary_
+                    sortableFieldHeader iu.baseUser_, iu.baseUser.username_
+                    sortableFieldHeader iu.baseUser_, iu.baseUser.subsidiary_
                 }
                 fieldHeader tr("intercomUser.pubKeyContent.label")
             }
-            def objects = taackSimpleFilterService.list(IntercomUser, 15)
-            paginate(15, params.long("offset"), objects.bValue)
-            for (final cui in objects.aValue) {
+            iterate(taackFilterService.getBuilder(IntercomUser).setMaxNumberOfLine(15).build()) { IntercomUser cui ->
                 row {
                     rowColumn {
-                        rowField cui.dateCreated
+                        rowField cui.dateCreated_
                         rowField cui.userCreated.toString()
                     }
                     rowColumn {
-                        rowField cui.lastUpdated
+                        rowField cui.lastUpdated_
                         rowField cui.userUpdated.toString()
                     }
                     rowColumn {
                         if (selectMode) {
-                            rowLink "Select", ActionIcon.SELECT * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&selectO2MIntercomRepoUserCloseModal as MethodClosure, cui.id, true
+                            rowAction ActionIcon.SELECT * IconStyle.SCALE_DOWN, IntercomController.&selectO2MIntercomRepoUserCloseModal as MC, cui.id
                         } else {
-                            if (crewUiService.canManage(cui.baseUser)) rowLink "Edit", ActionIcon.EDIT * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&editIntercomUser as MethodClosure, cui.id, true
+                            if (crewSecurityService.canEdit(cui.baseUser))
+                                rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editIntercomUser as MC, cui.id
                         }
                         rowField cui.baseUser.toString()
-                        rowField cui.baseUser.mainSubsidiary.toString()
+                        rowField cui.baseUser.subsidiary.toString()
                     }
                     rowField cui.pubKeyContent
                 }
@@ -101,7 +102,7 @@ class IntercomUiService implements WebAttributes {
         new Pair<UiFilterSpecifier, UiTableSpecifier>(filter, t)
     }
 
-    Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomRepoList(boolean selectMode = false) {
+    Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomRepoList() {
         IntercomRepo ir = new IntercomRepo(owner: new IntercomUser(baseUser: new User()))
         UiFilterSpecifier filter = new UiFilterSpecifier()
         filter.ui IntercomRepo, {
@@ -113,18 +114,17 @@ class IntercomUiService implements WebAttributes {
         }
 
         UiTableSpecifier t = new UiTableSpecifier()
-        t.ui IntercomUser, {
+        t.ui {
             header {
                 sortableFieldHeader ir.dateCreated_
-                fieldHeader tr("intercomRepo.owner.label")
+                fieldHeader ir.owner_
                 sortableFieldHeader ir.name_
                 fieldHeader "URL"
                 fieldHeader tr("default.actions.label")
             }
-            def objects = taackSimpleFilterService.list(IntercomRepo)
-            for (IntercomRepo repo : objects.aValue) {
+            iterate(taackFilterService.getBuilder(IntercomRepo).build()) { IntercomRepo repo ->
                 row {
-                    rowField repo.dateCreated
+                    rowField repo.dateCreated_
                     rowField repo.owner.baseUser.username
                     rowField repo.name
                     String names = ""
@@ -139,8 +139,8 @@ class IntercomUiService implements WebAttributes {
                     }
                     rowField "git clone intra:${repo.name} (contains following docs: $names)"
                     rowColumn {
-                        rowLink tr("default.button.create.label"), ActionIcon.CREATE * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&createDoc as MethodClosure, repo.id
-                        rowLink tr("default.button.edit.label"), ActionIcon.EDIT * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&editRepo as MethodClosure, repo.id
+                        rowAction ActionIcon.CREATE * IconStyle.SCALE_DOWN, IntercomController.&createDoc as MC, repo.id
+                        rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editRepo as MC, repo.id
                     }
                 }
             }
@@ -148,7 +148,7 @@ class IntercomUiService implements WebAttributes {
         new Pair<UiFilterSpecifier, UiTableSpecifier>(filter, t)
     }
 
-    Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomRepoDocList(final IntercomConfig.DocumentCategory category = null, final boolean latest = false) {
+    Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomRepoDocList(final IntercomDocumentCategory category = null) {
         IntercomRepoDoc id = new IntercomRepoDoc(
                 intercomRepo: new IntercomRepo(owner: new IntercomUser(baseUser: new User())),
                 category: category
@@ -170,28 +170,27 @@ class IntercomUiService implements WebAttributes {
         }
 
         UiTableSpecifier t = new UiTableSpecifier()
-        t.ui IntercomRepoDoc, {
+        t.ui {
             header {
                 column {
                     sortableFieldHeader id.dateCreated_
-                    fieldHeader tr("intercomRepo.owner.label")
+                    fieldHeader id.intercomRepo_, new IntercomRepo().owner_
                 }
                 column {
                     sortableFieldHeader id.category_
                     sortableFieldHeader id.kind_
                 }
-                fieldHeader tr("intercomRepoDoc.abstractDesc.label")
+                fieldHeader id.abstractDesc_
                 column {
-                    fieldHeader tr("intercomRepoDoc.baseFilePath.label")
-                    fieldHeader tr("intercomRepo.name.label")
+                    fieldHeader id.baseFilePath_
+                    fieldHeader id.docTitle_
                 }
                 fieldHeader tr("default.actions.label")
             }
-            def objects = taackSimpleFilterService.list(IntercomRepoDoc, 20, filter)
-            for (IntercomRepoDoc doc : objects.aValue) {
+            iterate(taackFilterService.getBuilder(IntercomRepoDoc).build()) { IntercomRepoDoc doc ->
                 row {
                     rowColumn {
-                        rowField doc.dateCreated
+                        rowField doc.dateCreated_
                         rowField doc.intercomRepo.owner.baseUser.username
                     }
                     rowColumn {
@@ -205,16 +204,16 @@ class IntercomUiService implements WebAttributes {
                     }
                     rowColumn {
                         if (doc.lastRevAuthor) {
-                            rowLink "View", ActionIcon.SHOW * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&viewDoc as MethodClosure, doc.id, false
+                            rowAction ActionIcon.SHOW * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id
 
-                            if (doc.kind == IntercomConfig.DocumentKind.PAGE)
-                                rowLink "PDF", ActionIcon.EXPORT_PDF * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&dlDoc as MethodClosure, doc.id, false
-                            else if (doc.kind == IntercomConfig.DocumentKind.SLIDESHOW)
-                                rowLink "PDF", ActionIcon.EXPORT_PDF * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&viewDoc as MethodClosure, doc.id, ["print-pdf": true], false
+                            if (doc.kind == IntercomDocumentKind.PAGE)
+                                rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&dlDoc as MC, doc.id
+                            else if (doc.kind == IntercomDocumentKind.SLIDESHOW)
+                                rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id, ["print-pdf": true]
                         }
-                        rowLink "History", ActionIcon.DETAILS * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&histDoc as MethodClosure, doc.id, true
-                        rowLink "Edit", ActionIcon.EDIT * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&editDoc as MethodClosure, doc.id, true
-                        rowLink "Refresh", ActionIcon.REFRESH * ActionIconStyleModifier.SCALE_DOWN, IntercomController.&refreshDoc as MethodClosure, doc.id, true
+                        rowAction ActionIcon.DETAILS * IconStyle.SCALE_DOWN, IntercomController.&histDoc as MC, doc.id
+                        rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editDoc as MC, doc.id
+                        rowAction ActionIcon.REFRESH * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
                     }
                 }
             }

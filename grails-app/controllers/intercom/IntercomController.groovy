@@ -1,12 +1,12 @@
 package intercom
 
+import app.config.SupportedLanguage
 import crew.CrewUiService
 import grails.compiler.GrailsCompileStatic
 import grails.gorm.transactions.Transactional
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.plugin.springsecurity.annotation.Secured
 import org.codehaus.groovy.runtime.MethodClosure as MC
-import org.springframework.security.access.AccessDeniedException
 import org.taack.User
 import taack.domain.TaackSaveService
 import taack.render.TaackUiProgressBarService
@@ -16,6 +16,9 @@ import taack.ui.base.block.BlockSpec
 import taack.ui.base.common.ActionIcon
 import taack.ui.base.form.FormSpec
 import taack.ui.utils.Markdown
+
+import static grails.async.Promises.task
+
 /**
  * Independent App Managing Documentation via Git
  * Functionalities:
@@ -43,7 +46,6 @@ class IntercomController {
     TaackUiService taackUiService
     TaackSaveService taackSaveService
     IntercomUiService intercomUiService
-    CrewUiService crewUiService
     IntercomAsciidoctorConverterService intercomAsciidoctorConverterService
     SpringSecurityService springSecurityService
     TaackUiProgressBarService taackUiProgressBarService
@@ -73,10 +75,6 @@ class IntercomController {
         IntercomUser.findByBaseUser(u)
     }
 
-    protected final String tr(final String code, final Locale locale = null) {
-        intercomUiService.tr(code, locale)
-    }
-
     private UiMenuSpecifier buildMenu(String q = null) {
         def intercomUser = currentIntercomUser()
         UiMenuSpecifier m = new UiMenuSpecifier()
@@ -95,6 +93,7 @@ class IntercomController {
                 menuIcon ActionIcon.CREATE, this.&createRepo as MC
             }
             menuSearch IntercomController.&search as MC, q
+            menuOptions(SupportedLanguage.EN)
         }
         m
     }
@@ -139,20 +138,18 @@ class IntercomController {
     }
 
     def viewDoc(IntercomRepoDoc doc, String vers) {
-        if (doc.kind == IntercomConfig.DocumentKind.SLIDESHOW) {
+        if (doc.kind == IntercomDocumentKind.SLIDESHOW) {
             def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
             render(
                     view: "asciidocReveal${vers ?: '5'}",
                     model: [
                             pageAsciidocContent: prez.text,
                             theme              : doc.theme,
-                            conf               : taackUiPluginConfiguration,
                             menu               : taackUiService.visitMenu(buildMenu())
                     ])
         } else {
             def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
             render(view: "asciidoc", model: [pageAsciidocContent: prez.text,
-                                             conf               : taackUiPluginConfiguration,
                                              menu               : taackUiService.visitMenu(buildMenu())])
         }
     }
@@ -194,7 +191,7 @@ class IntercomController {
                 def prez = intercomAsciidoctorConverterService.processDoc(doc)
                 intercomAsciidoctorConverterService.refreshDocMetaData(doc)
                 taackUiProgressBarService.progress(pId, 50)
-                if (doc.kind == IntercomConfig.DocumentKind.SLIDESHOW) intercomAsciidoctorConverterService.processDoc(doc, true)
+                if (doc.kind == IntercomDocumentKind.SLIDESHOW) intercomAsciidoctorConverterService.processDoc(doc, true)
                 taackUiProgressBarService.progress(pId, 50)
             } catch (e) {
                 log.error(e.message)
@@ -332,21 +329,21 @@ class IntercomController {
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def createRepo() {
         IntercomRepo intercomRepo = new IntercomRepo()
-        taackUiService.showModal(buildIntercomRepoForm(intercomRepo), "Create Repo")
+        taackUiService.showModal(buildIntercomRepoForm(intercomRepo))
     }
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def createDoc(IntercomRepo repo) {
-        taackUiService.showModal(buildIntercomDocForm(new IntercomRepoDoc(intercomRepo: repo)), "Create Doc")
+        taackUiService.showModal(buildIntercomDocForm(new IntercomRepoDoc(intercomRepo: repo)))
     }
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def editDoc(IntercomRepoDoc doc) {
-        taackUiService.showModal(buildIntercomDocForm(doc), "Edit Doc")
+        taackUiService.showModal(buildIntercomDocForm(doc))
     }
 
     def editRepo(IntercomRepo intercomRepo) {
-        taackUiService.showModal(buildIntercomRepoForm(intercomRepo), "Edit Repo")
+        taackUiService.showModal(buildIntercomRepoForm(intercomRepo))
     }
 
     def showLatestDocs() {
@@ -398,23 +395,18 @@ class IntercomController {
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def createIntercomUser(User userToCreate) {
-        if (!crewUiService.canManage(userToCreate)) {
-            taackUiService.show CrewUiService.messageBlock("Not allowed to activate this user")
-            return
-        }
         IntercomUser iu = IntercomUser.findByBaseUser(userToCreate)
         if (iu) {
             taackUiService.show CrewUiService.messageBlock("User ${userToCreate.username} already has a profile..")
             return
         }
         iu = new IntercomUser(baseUser: userToCreate, userCreated: authenticatedUser as User)
-        taackUiService.showModal(buildIntercomUserForm(iu), "Data Access")
+        taackUiService.showModal(buildIntercomUserForm(iu))
     }
 
     @Transactional
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def saveIntercomUser() {
-        if (!crewUiService.canManage(User.read(params.long("baseUser.id")) ?: authenticatedUser as User)) throw new AccessDeniedException("Operation denied !!")
         taackSaveService.saveThenRedirectOrRenderErrors(IntercomUser, this.&intercomUsers as MC)
     }
 
@@ -431,7 +423,7 @@ class IntercomController {
     }
 
     def editIntercomUser(IntercomUser intercomUser) {
-        taackUiService.showModal(buildIntercomUserForm(intercomUser), "Data Access")
+        taackUiService.showModal(buildIntercomUserForm(intercomUser))
     }
 
     def search(String q) {

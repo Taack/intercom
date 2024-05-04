@@ -73,7 +73,7 @@ class IntercomSearchService implements TaackSearchService.IIndexService {
 
     @Override
     List<? extends GormEntity> indexThose(Class<? extends GormEntity> toIndex) {
-        if (toIndex.isAssignableFrom(IntercomRepoDoc)) return IntercomRepoDoc.findAllByKind(IntercomConfig.DocumentKind.PAGE)
+        if (toIndex.isAssignableFrom(IntercomRepoDoc)) return IntercomRepoDoc.findAllByKind(IntercomDocumentKind.PAGE)
         else null
     }
 
@@ -109,7 +109,7 @@ class IntercomSearchService implements TaackSearchService.IIndexService {
                 <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
                 """.stripIndent()
-            String htmlTxt = htmlTxtHeader + (doc.kind == IntercomConfig.DocumentKind.SLIDESHOW ? '</head>' : '') + htmlTxtContent
+            String htmlTxt = htmlTxtHeader + (doc.kind == IntercomDocumentKind.SLIDESHOW ? '</head>' : '') + htmlTxtContent
 
             try (InputStream stream = new ByteArrayInputStream(htmlTxt.bytes)) {
                 log.info "creating ${txtPath} from ${htmlPath}"
