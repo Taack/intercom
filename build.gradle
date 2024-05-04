@@ -1,0 +1,16 @@
+plugins {
+    id 'taack-grails-plugin'
+    id 'taack-asciidoctor'
+}
+
+dependencies {
+    implementation 'org.eclipse.jgit:org.eclipse.jgit:6.9.0.202403050737-r'
+}
+
+grails {
+    // should use gradle -Dgrails.run.active=true bootRun
+    exploded = true
+    plugins {
+        implementation project(':crew')
+    }
+}
