@@ -53,21 +53,22 @@ class IntercomSearchService implements TaackSearchService.IIndexService {
             d ?= new IntercomRepoDoc()
             String content = docTxtContent(d)
             if (content || !d.id) {
-                indexField "File Name (NOA)", SolrFieldType.TXT_NO_ACCENT, d.baseFilePath_
-                indexField "File Name (GEN)", SolrFieldType.TXT_GENERAL, d.baseFilePath_
-                indexField "Doc Title (NOA)", SolrFieldType.TXT_NO_ACCENT, d.docTitle_
-                indexField "Doc Title (GEN)", SolrFieldType.TXT_GENERAL, d.docTitle_
-                indexField "Authors", SolrFieldType.TXT_NO_ACCENT, d.authors_
-                indexField "File Content", SolrFieldType.TXT_GENERAL, "fileContent", content
-                indexField "Abstract", SolrFieldType.TXT_GENERAL, d.abstractDesc_
-                indexField "Date Created", SolrFieldType.DATE, 0.5f, true, d.dateCreated_
-                indexField "User Created", SolrFieldType.POINT_STRING, "userCreated", 0.5f, true, d.userCreated?.username
+                indexField SolrFieldType.TXT_NO_ACCENT, d.baseFilePath_
+                indexField SolrFieldType.TXT_GENERAL, d.baseFilePath_
+                indexField SolrFieldType.TXT_NO_ACCENT, d.docTitle_
+                indexField SolrFieldType.TXT_GENERAL, d.docTitle_
+                indexField SolrFieldType.TXT_NO_ACCENT, d.authors_
+                indexField SolrFieldType.TXT_GENERAL, "fileContent", content
+                indexField SolrFieldType.TXT_GENERAL, d.abstractDesc_
+                indexField SolrFieldType.DATE, 0.5f, true, d.dateCreated_
+                indexField SolrFieldType.POINT_STRING, "userCreated", 0.5f, true, d.userCreated?.username
             }
         }))
     }
 
     String labeling(Long id) {
         def u = IntercomRepoDoc.read(id)
+        if (!u) return ''
         "IntercomRepoDoc: ${u.baseFilePath} in ${u.intercomRepo.name} ($id) by ${u.userCreated.username}"
     }
 
