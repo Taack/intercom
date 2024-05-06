@@ -79,11 +79,11 @@ class IntercomUiService implements WebAttributes {
                 row {
                     rowColumn {
                         rowField cui.dateCreated_
-                        rowField cui.userCreated.toString()
+                        rowField cui.userCreated.username
                     }
                     rowColumn {
                         rowField cui.lastUpdated_
-                        rowField cui.userUpdated.toString()
+                        rowField cui.userUpdated.username
                     }
                     rowColumn {
                         if (selectMode) {
@@ -92,11 +92,12 @@ class IntercomUiService implements WebAttributes {
                             if (crewSecurityService.canEdit(cui.baseUser))
                                 rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editIntercomUser as MC, cui.id
                         }
-                        rowField cui.baseUser.toString()
+                        rowField cui.baseUser.username
                         rowField cui.baseUser.subsidiary.toString()
                     }
-                    rowField cui.pubKeyContent
-                }
+                    String[] ssdCred = cui.pubKeyContent.split(' ')
+                    rowField((ssdCred.length == 3) ? ssdCred[0] + ' ' + ssdCred[2] : (ssdCred.length > 0) ? ssdCred.first() : '???')
+                 }
             }
         }
         new Pair<UiFilterSpecifier, UiTableSpecifier>(filter, t)

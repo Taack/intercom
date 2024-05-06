@@ -18,6 +18,7 @@ import taack.ui.base.form.FormSpec
 import taack.ui.utils.Markdown
 
 import static grails.async.Promises.task
+import static taack.render.TaackUiService.tr
 
 /**
  * Independent App Managing Documentation via Git
@@ -323,7 +324,7 @@ class IntercomController {
 
     def repos() {
         def p = intercomUiService.buildIntercomRepoList()
-        taackUiService.show(p.bValue, "Table", p.aValue, "Filter", buildMenu())
+        taackUiService.show(p.bValue, "Table", p.aValue, tr('default.filter.label'), buildMenu())
     }
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
@@ -385,16 +386,17 @@ class IntercomController {
 
     def repoDocs() {
         def p = intercomUiService.buildIntercomRepoDocList()
-        taackUiService.show(p.bValue, "Table", p.aValue, "Filter", buildMenu())
+        taackUiService.show(p.bValue, "Table", p.aValue, tr('default.filter.label'), buildMenu())
     }
 
     def intercomUsers() {
         def p = intercomUiService.buildIntercomUserList()
-        taackUiService.show(p.bValue, "Table", p.aValue, "Filter", buildMenu())
+        taackUiService.show(p.bValue, tr('default.intrecomUser.label'), p.aValue, tr('default.filter.label'), buildMenu())
     }
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def createIntercomUser(User userToCreate) {
+        userToCreate ?= authenticatedUser as User
         IntercomUser iu = IntercomUser.findByBaseUser(userToCreate)
         if (iu) {
             taackUiService.show CrewUiService.messageBlock("User ${userToCreate.username} already has a profile..")
