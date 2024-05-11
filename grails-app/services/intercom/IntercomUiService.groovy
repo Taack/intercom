@@ -76,27 +76,25 @@ class IntercomUiService implements WebAttributes {
                 fieldHeader tr("intercomUser.pubKeyContent.label")
             }
             iterate(taackFilterService.getBuilder(IntercomUser).setMaxNumberOfLine(15).build()) { IntercomUser cui ->
-                row {
-                    rowColumn {
-                        rowField cui.dateCreated_
-                        rowField cui.userCreated.toString()
-                    }
-                    rowColumn {
-                        rowField cui.lastUpdated_
-                        rowField cui.userUpdated.toString()
-                    }
-                    rowColumn {
-                        if (selectMode) {
-                            rowAction ActionIcon.SELECT * IconStyle.SCALE_DOWN, IntercomController.&selectO2MIntercomRepoUserCloseModal as MC, cui.id
-                        } else {
-                            if (crewSecurityService.canEdit(cui.baseUser))
-                                rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editIntercomUser as MC, cui.id
-                        }
-                        rowField cui.baseUser.toString()
-                        rowField cui.baseUser.subsidiary.toString()
-                    }
-                    rowField cui.pubKeyContent
+                rowColumn {
+                    rowField cui.dateCreated_
+                    rowField cui.userCreated.toString()
                 }
+                rowColumn {
+                    rowField cui.lastUpdated_
+                    rowField cui.userUpdated.toString()
+                }
+                rowColumn {
+                    if (selectMode) {
+                        rowAction ActionIcon.SELECT * IconStyle.SCALE_DOWN, IntercomController.&selectO2MIntercomRepoUserCloseModal as MC, cui.id
+                    } else {
+                        if (crewSecurityService.canEdit(cui.baseUser))
+                            rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editIntercomUser as MC, cui.id
+                    }
+                    rowField cui.baseUser.toString()
+                    rowField cui.baseUser.subsidiary.toString()
+                }
+                rowField cui.pubKeyContent
             }
         }
         new Pair<UiFilterSpecifier, UiTableSpecifier>(filter, t)
@@ -123,25 +121,23 @@ class IntercomUiService implements WebAttributes {
                 fieldHeader tr("default.actions.label")
             }
             iterate(taackFilterService.getBuilder(IntercomRepo).build()) { IntercomRepo repo ->
-                row {
-                    rowField repo.dateCreated_
-                    rowField repo.owner.baseUser.username
-                    rowField repo.name
-                    String names = ""
-                    boolean isFirst = true
-                    for (def doc : IntercomRepoDoc.findAllByIntercomRepo(repo) as Collection<IntercomRepoDoc>) {
-                        if (!isFirst) {
-                            names += ", "
-                        }
-                        isFirst = false
-                        names += '<b>' + doc.baseFilePath + '</b>'
+                rowField repo.dateCreated_
+                rowField repo.owner.baseUser.username
+                rowField repo.name
+                String names = ""
+                boolean isFirst = true
+                for (def doc : IntercomRepoDoc.findAllByIntercomRepo(repo) as Collection<IntercomRepoDoc>) {
+                    if (!isFirst) {
+                        names += ", "
+                    }
+                    isFirst = false
+                    names += '<b>' + doc.baseFilePath + '</b>'
 
-                    }
-                    rowField "git clone intra:${repo.name} (contains following docs: $names)"
-                    rowColumn {
-                        rowAction ActionIcon.CREATE * IconStyle.SCALE_DOWN, IntercomController.&createDoc as MC, repo.id
-                        rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editRepo as MC, repo.id
-                    }
+                }
+                rowField "git clone intra:${repo.name} (contains following docs: $names)"
+                rowColumn {
+                    rowAction ActionIcon.CREATE * IconStyle.SCALE_DOWN, IntercomController.&createDoc as MC, repo.id
+                    rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editRepo as MC, repo.id
                 }
             }
         }
@@ -188,33 +184,31 @@ class IntercomUiService implements WebAttributes {
                 fieldHeader tr("default.actions.label")
             }
             iterate(taackFilterService.getBuilder(IntercomRepoDoc).build()) { IntercomRepoDoc doc ->
-                row {
-                    rowColumn {
-                        rowField doc.dateCreated_
-                        rowField doc.intercomRepo.owner.baseUser.username
-                    }
-                    rowColumn {
-                        rowField doc.category.toString()
-                        rowField doc.kind.toString()
-                    }
-                    rowField doc.abstractDesc
-                    rowColumn {
-                        rowField doc.baseFilePath
-                        rowField doc.intercomRepo.name
-                    }
-                    rowColumn {
-                        if (doc.lastRevAuthor) {
-                            rowAction ActionIcon.SHOW * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id
+                rowColumn {
+                    rowField doc.dateCreated_
+                    rowField doc.intercomRepo.owner.baseUser.username
+                }
+                rowColumn {
+                    rowField doc.category.toString()
+                    rowField doc.kind.toString()
+                }
+                rowField doc.abstractDesc
+                rowColumn {
+                    rowField doc.baseFilePath
+                    rowField doc.intercomRepo.name
+                }
+                rowColumn {
+                    if (doc.lastRevAuthor) {
+                        rowAction ActionIcon.SHOW * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id
 
-                            if (doc.kind == IntercomDocumentKind.PAGE)
-                                rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&dlDoc as MC, doc.id
-                            else if (doc.kind == IntercomDocumentKind.SLIDESHOW)
-                                rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id, ["print-pdf": true]
-                        }
-                        rowAction ActionIcon.DETAILS * IconStyle.SCALE_DOWN, IntercomController.&histDoc as MC, doc.id
-                        rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editDoc as MC, doc.id
-                        rowAction ActionIcon.REFRESH * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
+                        if (doc.kind == IntercomDocumentKind.PAGE)
+                            rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&dlDoc as MC, doc.id
+                        else if (doc.kind == IntercomDocumentKind.SLIDESHOW)
+                            rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id, ["print-pdf": true]
                     }
+                    rowAction ActionIcon.DETAILS * IconStyle.SCALE_DOWN, IntercomController.&histDoc as MC, doc.id
+                    rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editDoc as MC, doc.id
+                    rowAction ActionIcon.REFRESH * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
                 }
             }
         }
