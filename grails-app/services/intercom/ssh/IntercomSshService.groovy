@@ -11,7 +11,7 @@ import taack.ssh.vfs.FileCallback
 import taack.ssh.vfs.FileTree
 import taack.ssh.vfs.impl.VfsPath
 import taack.ssh.vfs.impl.VfsPosixFileAttributes
-import org.taack.User
+import crew.User
 
 import javax.annotation.PostConstruct
 import java.nio.channels.SeekableByteChannel

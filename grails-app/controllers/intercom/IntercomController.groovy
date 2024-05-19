@@ -1,13 +1,14 @@
 package intercom
 
-import app.config.SupportedLanguage
+import attachment.DocumentCategory
+import crew.config.SupportedLanguage
 import crew.CrewUiService
 import grails.compiler.GrailsCompileStatic
 import grails.gorm.transactions.Transactional
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.plugin.springsecurity.annotation.Secured
 import org.codehaus.groovy.runtime.MethodClosure as MC
-import org.taack.User
+import crew.User
 import taack.domain.TaackSaveService
 import taack.render.TaackUiProgressBarService
 import taack.render.TaackUiService
@@ -127,7 +128,7 @@ class IntercomController {
         new UiFormSpecifier().ui doc, {
             hiddenField(doc.intercomRepo_)
             section 'Doc', {
-                field doc.category_
+                field doc.documentCategory_
                 field doc.kind_
                 field doc.abstractDesc_
                 field doc.baseFilePath_
@@ -365,8 +366,9 @@ class IntercomController {
     }
 
     def showDocs(String documentCategory) {
-        IntercomDocumentCategory docCat = documentCategory as IntercomDocumentCategory
-        List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByCategoryAndLastRevAuthorIsNotNull(docCat, [max: 10, sort: "lastRevWhen", order: "desc"])
+        DocumentCategory docCat = documentCategory as DocumentCategory
+
+        List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByDocumentCategoryAndLastRevAuthorIsNotNull(docCat, [max: 10, sort: "lastRevWhen", order: "desc"])
         taackUiService.show(new UiTableSpecifier().ui({
             for (IntercomRepoDoc doc in docList) {
                 row {

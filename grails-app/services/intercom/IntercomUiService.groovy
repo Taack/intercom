@@ -1,5 +1,6 @@
 package intercom
 
+import attachment.DocumentCategory
 import crew.CrewController
 import crew.CrewSecurityService
 import grails.compiler.GrailsCompileStatic
@@ -8,7 +9,7 @@ import grails.util.Pair
 import grails.web.api.WebAttributes
 import org.codehaus.groovy.runtime.MethodClosure as MC
 import org.springframework.beans.factory.annotation.Autowired
-import org.taack.User
+import crew.User
 import taack.domain.TaackFilterService
 import taack.render.TaackUiEnablerService
 import taack.ui.base.UiFilterSpecifier
@@ -144,7 +145,7 @@ class IntercomUiService implements WebAttributes {
         new Pair<UiFilterSpecifier, UiTableSpecifier>(filter, t)
     }
 
-    Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomRepoDocList(final IntercomDocumentCategory category = null) {
+    Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomRepoDocList(final DocumentCategory category = null) {
         IntercomRepoDoc id = new IntercomRepoDoc(
                 intercomRepo: new IntercomRepo(owner: new IntercomUser(baseUser: new User())),
                 category: category
@@ -158,7 +159,7 @@ class IntercomUiService implements WebAttributes {
             section "Doc", {
                 filterField id.docTitle_
                 filterField id.subtitle_
-                filterField id.category_
+                filterField id.documentCategory_
                 filterField id.kind_
                 filterField id.baseFilePath_
                 filterField id.abstractDesc_
@@ -173,7 +174,7 @@ class IntercomUiService implements WebAttributes {
                     fieldHeader id.intercomRepo_, new IntercomRepo().owner_
                 }
                 column {
-                    sortableFieldHeader id.category_
+                    sortableFieldHeader id.documentCategory_
                     sortableFieldHeader id.kind_
                 }
                 fieldHeader id.abstractDesc_
@@ -189,7 +190,7 @@ class IntercomUiService implements WebAttributes {
                     rowField doc.intercomRepo.owner.baseUser.username
                 }
                 rowColumn {
-                    rowField doc.category.toString()
+                    rowField doc.documentCategory.toString()
                     rowField doc.kind.toString()
                 }
                 rowField doc.abstractDesc

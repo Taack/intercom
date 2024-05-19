@@ -6,7 +6,7 @@ import intercom.IntercomUser
 import org.apache.commons.io.FileUtils
 import org.springframework.beans.factory.annotation.Value
 import taack.ssh.SshEventRegistry
-import org.taack.User
+import crew.User
 
 import javax.annotation.PostConstruct
 

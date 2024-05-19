@@ -2,7 +2,7 @@ package intercom
 
 import grails.compiler.GrailsCompileStatic
 import taack.ast.annotation.TaackFieldEnum
-import org.taack.User
+import crew.User
 
 @GrailsCompileStatic
 @TaackFieldEnum
