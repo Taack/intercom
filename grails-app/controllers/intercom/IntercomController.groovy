@@ -16,7 +16,7 @@ import taack.ui.base.*
 import taack.ui.base.block.BlockSpec
 import taack.ui.base.common.ActionIcon
 import taack.ui.base.form.FormSpec
-import taack.ui.utils.Markdown
+import taack.ui.dump.markdown.Markdown
 
 import static grails.async.Promises.task
 
