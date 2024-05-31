@@ -246,7 +246,7 @@ class IntercomController {
         User u = springSecurityService.currentUser as User
         UiBlockSpecifier b = new UiBlockSpecifier().ui {
             ajaxBlock "index", {
-                show "Intercom Usage", new UiShowSpecifier().ui {
+                show new UiShowSpecifier().ui {
                     inlineHtml Markdown.getContentHtml("""\
                         # Configuring Intercom User (Linux and Mac)
                         
