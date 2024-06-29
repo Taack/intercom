@@ -12,10 +12,13 @@ import crew.User
 import taack.domain.TaackSaveService
 import taack.render.TaackUiProgressBarService
 import taack.render.TaackUiService
-import taack.ui.base.*
-import taack.ui.base.block.BlockSpec
-import taack.ui.base.common.ActionIcon
-import taack.ui.base.form.FormSpec
+import taack.ui.dsl.UiBlockSpecifier
+import taack.ui.dsl.UiFormSpecifier
+import taack.ui.dsl.UiMenuSpecifier
+import taack.ui.dsl.UiShowSpecifier
+import taack.ui.dsl.UiTableSpecifier
+import taack.ui.dsl.block.BlockSpec
+import taack.ui.dsl.common.ActionIcon
 import taack.ui.dump.markdown.Markdown
 
 import static grails.async.Promises.task
@@ -104,7 +107,7 @@ class IntercomController {
         form.ui iu, {
             hiddenField iu.baseUser_
             hiddenField iu.userCreated_
-            section 'Intercom User Settings', FormSpec.Width.FULL_WIDTH, {
+            section 'Intercom User Settings', {
                 field iu.pubKeyContent_
             }
             formAction IntercomController.&saveIntercomUser as MC, iu.id
@@ -167,12 +170,16 @@ class IntercomController {
 
     def histDoc(IntercomRepoDoc doc) {
         def listOfRev = intercomAsciidoctorConverterService.docHistory(doc)
-        taackUiService.showModal(new UiTableSpecifier().ui({
-            for (String rev in listOfRev)
-                row {
-                    rowField rev
-                }
-        }), "History")
+        taackUiService.show(new UiBlockSpecifier().ui {
+            modal {
+                new UiTableSpecifier().ui({
+                    for (String rev in listOfRev)
+                        row {
+                            rowField rev
+                        }
+                })
+            }
+        })
     }
 
     def dlDoc(IntercomRepoDoc doc) {
@@ -186,7 +193,11 @@ class IntercomController {
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def refreshDoc(IntercomRepoDoc doc) {
-        String pId = taackUiProgressBarService.progressStart(CrewUiService.messageBlock("Done .."), 100)
+        String pId = taackUiProgressBarService.progressStart(BlockSpec.buildBlockSpec {
+            show(new UiShowSpecifier().ui {
+                inlineHtml("Ended")
+            })
+        }, 100)
         task {
             try {
                 def prez = intercomAsciidoctorConverterService.processDoc(doc)
@@ -235,7 +246,9 @@ class IntercomController {
 
     def selectO2MIntercomRepoUser() {
         def p = intercomUiService.buildIntercomUserList(true)
-        taackUiService.showModal(p.bValue, "Table", p.aValue, "Filter")
+        taackUiService.show(new UiBlockSpecifier().ui {
+            tableFilter p.aValue, p.bValue
+        }, buildMenu())
     }
 
     def selectO2MIntercomRepoUserCloseModal(IntercomUser user) {
@@ -316,7 +329,7 @@ class IntercomController {
                         see [Asciidoctor Overview](https://intranet.citel.fr/intercom/viewDoc/2631529)
                         
                         """.stripIndent()), "markdown-body"
-                }, BlockSpec.Width.MAX
+                }
             }
         }
         taackUiService.show(b, buildMenu())
@@ -324,7 +337,9 @@ class IntercomController {
 
     def repos() {
         def p = intercomUiService.buildIntercomRepoList()
-        taackUiService.show(p.bValue, "Table", p.aValue, "Filter", buildMenu())
+        taackUiService.show(new UiBlockSpecifier().ui {
+            tableFilter p.aValue, p.bValue
+        }, buildMenu())
     }
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
@@ -349,50 +364,58 @@ class IntercomController {
 
     def showLatestDocs() {
         List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByLastRevWhenIsNotNull([max: 10, sort: "lastRevWhen", order: "desc"])
-        taackUiService.show(new UiTableSpecifier().ui( {
-            for (IntercomRepoDoc doc in docList) {
-                row {
-                    rowField """
+        taackUiService.show(new UiBlockSpecifier().ui {
+            table new UiTableSpecifier().ui( {
+                for (IntercomRepoDoc doc in docList) {
+                    row {
+                        rowField """
                             <b>${doc.docTitle ?: 'no title set ...'}</b><br>
                             ${doc.lastRevWhen} <b>${doc.lastRevAuthor}</b><br>
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
-                    rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
-                    rowAction ActionIcon.EXPORT_PDF, IntercomController.&dlDoc as MC, doc.id
-                    rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
+                        rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
+                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&dlDoc as MC, doc.id
+                        rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
+                    }
                 }
-            }
-        }), "Latest Docs", buildMenu())
+            })
+        }, buildMenu())
     }
 
     def showDocs(String documentCategory) {
         DocumentCategory docCat = documentCategory as DocumentCategory
 
         List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByDocumentCategoryAndLastRevAuthorIsNotNull(docCat, [max: 10, sort: "lastRevWhen", order: "desc"])
-        taackUiService.show(new UiTableSpecifier().ui({
-            for (IntercomRepoDoc doc in docList) {
-                row {
-                    rowField """
+        taackUiService.show(new UiBlockSpecifier().ui {
+            table new UiTableSpecifier().ui({
+                for (IntercomRepoDoc doc in docList) {
+                    row {
+                        rowField """
                             <b>${doc.docTitle ?: 'no title set ...'}</b><br>
                             ${doc.lastRevWhen} <b>${doc.lastRevAuthor}</b><br>
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
-                    rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
-                    rowAction ActionIcon.EXPORT_PDF, IntercomController.&dlDoc as MC, doc.id
-                    rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
+                        rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
+                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&dlDoc as MC, doc.id
+                        rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
+                    }
                 }
-            }
-        }), "${documentCategory}", buildMenu())
+            })
+        }, buildMenu())
     }
 
     def repoDocs() {
         def p = intercomUiService.buildIntercomRepoDocList()
-        taackUiService.show(p.bValue, "Table", p.aValue, "Filter", buildMenu())
+        taackUiService.show(new UiBlockSpecifier().ui {
+            tableFilter p.aValue, p.bValue
+        }, buildMenu())
     }
 
     def intercomUsers() {
         def p = intercomUiService.buildIntercomUserList()
-        taackUiService.show(p.bValue, "Table", p.aValue, "Filter", buildMenu())
+        taackUiService.show(new UiBlockSpecifier().ui {
+            tableFilter p.aValue, p.bValue
+        }, buildMenu())
     }
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])

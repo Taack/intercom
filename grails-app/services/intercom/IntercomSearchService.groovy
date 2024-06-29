@@ -1,15 +1,18 @@
 package intercom
 
+import crew.CrewController
 import grails.compiler.GrailsCompileStatic
 import org.apache.commons.io.FileUtils
 import org.codehaus.groovy.runtime.MethodClosure
 import org.grails.datastore.gorm.GormEntity
 import org.springframework.beans.factory.annotation.Value
+import taack.app.TaackApp
+import taack.app.TaackAppRegisterService
 import taack.domain.TaackAttachmentService
 import taack.domain.TaackSearchService
 import taack.solr.SolrFieldType
 import taack.solr.SolrSpecifier
-import taack.ui.base.UiBlockSpecifier
+import taack.ui.dsl.UiBlockSpecifier
 
 import javax.annotation.PostConstruct
 import java.nio.file.Files
@@ -47,6 +50,8 @@ class IntercomSearchService implements TaackSearchService.IIndexService {
 
     @PostConstruct
     private void init() {
+        TaackAppRegisterService.register(new TaackApp(IntercomController.&index as MethodClosure, new String(this.class.getResourceAsStream("/intercom/intercom.svg").readAllBytes())))
+
         FileUtils.forceMkdir(txtRootPath.toFile())
 
         taackSearchService.registerSolrSpecifier(this, new SolrSpecifier(IntercomRepoDoc, IntercomController.&viewDoc as MethodClosure, this.&labeling as MethodClosure, { IntercomRepoDoc d ->

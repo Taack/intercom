@@ -12,11 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import crew.User
 import taack.domain.TaackFilterService
 import taack.render.TaackUiEnablerService
-import taack.ui.base.UiFilterSpecifier
-import taack.ui.base.UiTableSpecifier
-import taack.ui.base.block.BlockSpec
-import taack.ui.base.common.ActionIcon
-import taack.ui.base.common.IconStyle
+import taack.ui.dsl.UiFilterSpecifier
+import taack.ui.dsl.UiTableSpecifier
+import taack.ui.dsl.block.BlockSpec
+import taack.ui.dsl.common.ActionIcon
+import taack.ui.dsl.common.IconStyle
 
 import javax.annotation.PostConstruct
 
@@ -74,7 +74,7 @@ class IntercomUiService implements WebAttributes {
                     sortableFieldHeader iu.baseUser_, iu.baseUser.username_
                     sortableFieldHeader iu.baseUser_, iu.baseUser.subsidiary_
                 }
-                fieldHeader tr("intercomUser.pubKeyContent.label")
+                label tr("intercomUser.pubKeyContent.label")
             }
             iterate(taackFilterService.getBuilder(IntercomUser).setMaxNumberOfLine(15).build()) { IntercomUser cui ->
                 rowColumn {
@@ -116,10 +116,10 @@ class IntercomUiService implements WebAttributes {
         t.ui {
             header {
                 sortableFieldHeader ir.dateCreated_
-                fieldHeader ir.owner_
+                label ir.owner_
                 sortableFieldHeader ir.name_
-                fieldHeader "URL"
-                fieldHeader tr("default.actions.label")
+                label "URL"
+                label tr("default.actions.label")
             }
             iterate(taackFilterService.getBuilder(IntercomRepo).build()) { IntercomRepo repo ->
                 rowField repo.dateCreated_
@@ -171,18 +171,18 @@ class IntercomUiService implements WebAttributes {
             header {
                 column {
                     sortableFieldHeader id.dateCreated_
-                    fieldHeader id.intercomRepo_, new IntercomRepo().owner_
+                    label id.intercomRepo_, new IntercomRepo().owner_
                 }
                 column {
                     sortableFieldHeader id.documentCategory_
                     sortableFieldHeader id.kind_
                 }
-                fieldHeader id.abstractDesc_
+                label id.abstractDesc_
                 column {
-                    fieldHeader id.baseFilePath_
-                    fieldHeader id.docTitle_
+                    label id.baseFilePath_
+                    label id.docTitle_
                 }
-                fieldHeader tr("default.actions.label")
+                label tr("default.actions.label")
             }
             iterate(taackFilterService.getBuilder(IntercomRepoDoc).build()) { IntercomRepoDoc doc ->
                 rowColumn {
@@ -209,7 +209,7 @@ class IntercomUiService implements WebAttributes {
                     }
                     rowAction ActionIcon.DETAILS * IconStyle.SCALE_DOWN, IntercomController.&histDoc as MC, doc.id
                     rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editDoc as MC, doc.id
-                    rowAction ActionIcon.REFRESH * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
+                    rowAction ActionIcon.REFRESH  * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
                 }
             }
         }
