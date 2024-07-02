@@ -1,18 +1,10 @@
 package intercom
 
+
+import attachment.TaackDocument
 import grails.compiler.GrailsCompileStatic
 import groovy.transform.CompileStatic
 import taack.ast.annotation.TaackFieldEnum
-import org.taack.User
-
-@CompileStatic
-enum IntercomDocumentCategory {
-    USER_GUIDE,
-    HOW_TOS,
-    NEWS,
-    TECHNICAL
-
-}
 
 @CompileStatic
 enum IntercomDocumentKind {
@@ -21,11 +13,9 @@ enum IntercomDocumentKind {
 
 @TaackFieldEnum
 @GrailsCompileStatic
-class IntercomRepoDoc {
-    Date dateCreated
-    User userCreated
+class IntercomRepoDoc extends TaackDocument {
+
     IntercomRepo intercomRepo
-    IntercomDocumentCategory category
     IntercomDocumentKind kind
     String abstractDesc
     String baseFilePath
@@ -48,10 +38,6 @@ class IntercomRepoDoc {
         subtitle nullable: true
         authors nullable: true
         theme nullable: true
-    }
-
-    static mapping = {
-        autoTimestamp true
     }
 
 }
