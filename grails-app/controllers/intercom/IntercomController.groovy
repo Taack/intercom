@@ -22,6 +22,7 @@ import taack.ui.dsl.common.ActionIcon
 import taack.ui.dump.markdown.Markdown
 
 import static grails.async.Promises.task
+import static taack.render.TaackUiService.tr
 
 /**
  * Independent App Managing Documentation via Git
@@ -337,6 +338,7 @@ class IntercomController {
 
     def repos() {
         def p = intercomUiService.buildIntercomRepoList()
+
         taackUiService.show(new UiBlockSpecifier().ui {
             tableFilter p.aValue, p.bValue
         }, buildMenu())
@@ -420,6 +422,7 @@ class IntercomController {
 
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def createIntercomUser(User userToCreate) {
+        userToCreate ?= authenticatedUser as User
         IntercomUser iu = IntercomUser.findByBaseUser(userToCreate)
         if (iu) {
             taackUiService.show CrewUiService.messageBlock("User ${userToCreate.username} already has a profile..")
