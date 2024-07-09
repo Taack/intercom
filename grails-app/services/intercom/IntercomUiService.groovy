@@ -189,7 +189,10 @@ class IntercomUiService implements WebAttributes {
                 }
                 label tr("default.actions.label")
             }
-            iterate(taackFilterService.getBuilder(IntercomRepoDoc).build()) { IntercomRepoDoc doc ->
+            iterate(taackFilterService.getBuilder(IntercomRepoDoc)
+                    .setSortOrder(TaackFilter.Order.DESC, id.dateCreated_)
+                    .setMaxNumberOfLine(10)
+                    .build()) { IntercomRepoDoc doc ->
                 rowColumn {
                     rowField doc.dateCreated_
                     rowField doc.intercomRepo.owner.baseUser.username

@@ -1,6 +1,7 @@
 package intercom
 
 import attachment.DocumentCategory
+import crew.AttachmentController
 import crew.config.SupportedLanguage
 import crew.CrewUiService
 import grails.compiler.GrailsCompileStatic
@@ -84,13 +85,13 @@ class IntercomController {
         def intercomUser = currentIntercomUser()
         UiMenuSpecifier m = new UiMenuSpecifier()
         m.ui {
+            menu this.&index as MC
             menu this.&showLatestDocs as MC
             menu this.&showDocs as MC
             
             if (!intercomUser) {
                 menuIcon ActionIcon.CREATE, this.&createIntercomUser as MC
             } else {
-                menu this.&index as MC
                 menu this.&repoDocs as MC
                 menu this.&repos as MC
                 menu this.&intercomUsers as MC
@@ -132,7 +133,8 @@ class IntercomController {
         new UiFormSpecifier().ui doc, {
             hiddenField(doc.intercomRepo_)
             section 'Doc', {
-                ajaxField doc.documentCategory_ //TODO
+                ajaxField doc.documentAccess_, AttachmentController.&selectDocumentAccess as MC //TODO
+                ajaxField doc.documentCategory_, AttachmentController.&selectDocumentCategory as MC //TODO
                 field doc.kind_
                 field doc.abstractDesc_
                 field doc.baseFilePath_
