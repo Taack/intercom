@@ -44,8 +44,7 @@ import static taack.render.TaackUiService.tr
  *  - Multiple doc per repo
  *  - Heading: UserGuides, HowTos, News and Noteworthy
  *
- *  Alternative to tree: tags, history, research
- */
+ *  Alternative to tree: tags, history, research*/
 @GrailsCompileStatic
 @Secured(["isAuthenticated()"])
 class IntercomController {
@@ -88,7 +87,7 @@ class IntercomController {
             menu this.&index as MC
             menu this.&showLatestDocs as MC
             menu this.&showDocs as MC
-            
+
             if (!intercomUser) {
                 menuIcon ActionIcon.CREATE, this.&createIntercomUser as MC
             } else {
@@ -146,18 +145,19 @@ class IntercomController {
 
     def viewDoc(IntercomRepoDoc doc, String vers) {
         if (doc.kind == IntercomDocumentKind.SLIDESHOW) {
-            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-            render(
-                    view: "asciidocReveal${vers ?: '5'}",
-                    model: [
-                            pageAsciidocContent: prez.text,
-                            theme              : doc.theme,
-                            menu               : taackUiService.visitMenu(buildMenu())
-                    ])
+            taackUiService.show(
+            //            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
+//            render(
+//                    view: "asciidocReveal${vers ?: '5'}",
+//                    model: [
+//                            pageAsciidocContent: prez.text,
+//                            theme              : doc.theme,
+//                            menu               : taackUiService.visitMenu(buildMenu())
+//                    ])
         } else {
-            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-            render(view: "asciidoc", model: [pageAsciidocContent: prez.text,
-                                             menu               : taackUiService.visitMenu(buildMenu())])
+//            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
+//            render(view: "asciidoc", model: [pageAsciidocContent: prez.text,
+//                                             menu               : taackUiService.visitMenu(buildMenu())])
         }
     }
 
@@ -176,10 +176,9 @@ class IntercomController {
         taackUiService.show(new UiBlockSpecifier().ui {
             modal {
                 new UiTableSpecifier().ui({
-                    for (String rev in listOfRev)
-                        row {
-                            rowField rev
-                        }
+                    for (String rev in listOfRev) row {
+                        rowField rev
+                    }
                 })
             }
         })
@@ -369,13 +368,14 @@ class IntercomController {
     }
 
     def showLatestDocs() {
-        List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByLastRevWhenIsNotNull([max: 10, sort: "lastRevWhen", order: "desc"])
         taackUiService.show(new UiBlockSpecifier().ui {
-            table new UiTableSpecifier().ui( {
-                for (IntercomRepoDoc doc in docList) {
+            table new UiTableSpecifier().ui({
+                for (IntercomRepoDoc doc in IntercomRepoDoc.findAll([max: 10, sort: "lastRevWhen", order: "desc"])) {
+                    println "DOC $doc"
+
                     row {
                         rowField """
-                            <b>${doc.docTitle ?: 'no title set ...'}</b><br>
+                            <b>${doc.docTitle ?: doc.baseFilePath}</b><br>
                             ${doc.lastRevWhen} <b>${doc.lastRevAuthor}</b><br>
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
@@ -391,13 +391,13 @@ class IntercomController {
     def showDocs(String documentCategory) {
         DocumentCategory docCat = documentCategory as DocumentCategory
 
-        List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByDocumentCategoryAndLastRevAuthorIsNotNull(docCat, [max: 10, sort: "lastRevWhen", order: "desc"])
         taackUiService.show(new UiBlockSpecifier().ui {
             table new UiTableSpecifier().ui({
-                for (IntercomRepoDoc doc in docList) {
+                for (IntercomRepoDoc doc in IntercomRepoDoc.findAllByDocumentCategoryAndLastRevAuthorIsNotNull(docCat, [max: 10, sort: "lastRevWhen", order: "desc"])) {
+                    println "DOC $doc"
                     row {
                         rowField """
-                            <b>${doc.docTitle ?: 'no title set ...'}</b><br>
+                            <b>${doc.docTitle ?: doc.baseFilePath}</b><br>
                             ${doc.lastRevWhen} <b>${doc.lastRevAuthor}</b><br>
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
@@ -472,8 +472,7 @@ class IntercomController {
     @Secured(["ROLE_ADMIN"])
     def refreshAllDocs() {
         List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByLastRevWhenIsNotNull([max: 10, sort: "lastRevWhen", order: "desc"])
-        for (def doc in docList)
-            intercomAsciidoctorConverterService.refreshDocMetaData(doc)
+        for (def doc in docList) intercomAsciidoctorConverterService.refreshDocMetaData(doc)
 
         render "OK"
     }

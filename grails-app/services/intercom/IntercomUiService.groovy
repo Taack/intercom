@@ -233,6 +233,22 @@ class IntercomUiService implements WebAttributes {
         }
     }
 
+    def renderReveal(IntercomRepoDoc doc) {
+        def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
+        g.render(
+                view: "asciidocReveal5",
+                model: [
+                        pageAsciidocContent: prez.text,
+                        theme              : doc.theme,
+                ])
+
+    }
+
+    def renderAsciidoc(IntercomRepoDoc doc) {
+        def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
+        g.render(view: "asciidoc", model: [pageAsciidocContent: prez.text])
+    }
+
     Closure<BlockSpec> buildBlockAsciidocModal(IAsciidocAnchorRef ref) {
         BlockSpec.buildBlockSpec {
             ajaxBlock "showHelpIFrame", {
