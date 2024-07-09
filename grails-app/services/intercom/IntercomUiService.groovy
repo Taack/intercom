@@ -90,11 +90,11 @@ class IntercomUiService implements WebAttributes {
                     if (selectMode) {
                         rowAction ActionIcon.SELECT * IconStyle.SCALE_DOWN, IntercomController.&selectO2MIntercomRepoUserCloseModal as MC, cui.id
                     } else {
-                        if (crewSecurityService.canEdit(cui.baseUser))
-                            rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editIntercomUser as MC, cui.id
+                        rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editIntercomUser as MC, cui.id
+                        rowAction ActionIcon.DELETE * IconStyle.SCALE_DOWN, IntercomController.&deleteIntercomUser as MC, cui.id
                     }
-                    rowField cui.baseUser.toString()
-                    rowField cui.baseUser.subsidiary.toString()
+                    rowField cui.baseUser_
+                    rowField cui.baseUser.subsidiary_
                 }
                 rowField cui.pubKeyContent
             }

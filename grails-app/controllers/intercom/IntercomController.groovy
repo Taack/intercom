@@ -439,6 +439,13 @@ class IntercomController {
     }
 
     @Transactional
+    @Secured(['ROLE_ADMIN'])
+    def deleteIntercomUser(IntercomUser intercomUser) {
+        intercomUser.delete()
+        taackUiService.ajaxReload()
+    }
+
+    @Transactional
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def saveIntercomRepo() {
         taackSaveService.saveThenRedirectOrRenderErrors(IntercomRepo, this.&repos as MC)

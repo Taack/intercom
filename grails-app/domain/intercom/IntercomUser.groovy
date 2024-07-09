@@ -21,6 +21,7 @@ class IntercomUser {
     String pubKeyContent
 
     static constraints = {
+        baseUser unique: true
         pubKeyContent maxSize: 8 * 8192, widget: 'textarea'
     }
 }
