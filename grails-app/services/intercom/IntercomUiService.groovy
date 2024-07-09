@@ -10,6 +10,7 @@ import grails.web.api.WebAttributes
 import org.codehaus.groovy.runtime.MethodClosure as MC
 import org.springframework.beans.factory.annotation.Autowired
 import crew.User
+import taack.domain.TaackFilter
 import taack.domain.TaackFilterService
 import taack.render.TaackUiEnablerService
 import taack.ui.dsl.UiFilterSpecifier
@@ -122,9 +123,12 @@ class IntercomUiService implements WebAttributes {
                 label "URL"
                 label tr("default.actions.label")
             }
-            iterate(taackFilterService.getBuilder(IntercomRepo).build()) { IntercomRepo repo ->
+            iterate(taackFilterService.getBuilder(IntercomRepo)
+                    .setSortOrder(TaackFilter.Order.DESC, ir.dateCreated_)
+                    .setMaxNumberOfLine(10)
+                    .build()) { IntercomRepo repo ->
                 rowField repo.dateCreated_
-                rowField repo.owner.baseUser.username
+                rowField repo.owner.baseUser_
                 rowField repo.name
                 String names = ""
                 boolean isFirst = true

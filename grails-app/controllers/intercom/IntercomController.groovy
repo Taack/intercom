@@ -132,7 +132,7 @@ class IntercomController {
         new UiFormSpecifier().ui doc, {
             hiddenField(doc.intercomRepo_)
             section 'Doc', {
-                field doc.documentCategory_
+                ajaxField doc.documentCategory_ //TODO
                 field doc.kind_
                 field doc.abstractDesc_
                 field doc.baseFilePath_
@@ -248,8 +248,10 @@ class IntercomController {
     def selectO2MIntercomRepoUser() {
         def p = intercomUiService.buildIntercomUserList(true)
         taackUiService.show(new UiBlockSpecifier().ui {
-            tableFilter p.aValue, p.bValue
-        }, buildMenu())
+            modal {
+                tableFilter p.aValue, p.bValue
+            }
+        })
     }
 
     def selectO2MIntercomRepoUserCloseModal(IntercomUser user) {
