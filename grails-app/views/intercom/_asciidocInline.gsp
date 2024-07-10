@@ -6,6 +6,7 @@
 --%>
 
 <%@ page contentType="text/html;charset=UTF-8" %>
+<asset:stylesheet src="font-awesome.css"/>
 <asset:stylesheet src="intercom.css"/>
 <style>
 #asciidoctor {
