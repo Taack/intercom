@@ -23,7 +23,6 @@ import taack.ui.dsl.common.ActionIcon
 import taack.ui.dump.markdown.Markdown
 
 import static grails.async.Promises.task
-import static taack.render.TaackUiService.tr
 
 /**
  * Independent App Managing Documentation via Git
@@ -186,7 +185,7 @@ class IntercomController {
         })
     }
 
-    def dlDoc(IntercomRepoDoc doc) {
+    def downloadBinDoc(IntercomRepoDoc doc) {
         def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc, true)
         response.setContentType("application/pdf")
         response.setHeader("Content-disposition", "attachment;filename=\"${prez.name}\"")
@@ -382,7 +381,7 @@ class IntercomController {
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
                         rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
-                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&dlDoc as MC, doc.id
+                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&downloadBinDoc as MC, doc.id
                         rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
                     }
                 }
@@ -404,7 +403,7 @@ class IntercomController {
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
                         rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
-                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&dlDoc as MC, doc.id
+                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&downloadBinDoc as MC, doc.id
                         rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
                     }
                 }

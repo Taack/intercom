@@ -211,7 +211,7 @@ class IntercomUiService implements WebAttributes {
                         rowAction ActionIcon.SHOW * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id
 
                         if (doc.kind == IntercomDocumentKind.PAGE)
-                            rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&dlDoc as MC, doc.id
+                            rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&downloadBinDoc as MC, doc.id
                         else if (doc.kind == IntercomDocumentKind.SLIDESHOW)
                             rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id, ["print-pdf": true]
                     }
