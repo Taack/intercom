@@ -145,19 +145,21 @@ class IntercomController {
 
     def viewDoc(IntercomRepoDoc doc, String vers) {
         if (doc.kind == IntercomDocumentKind.SLIDESHOW) {
-            taackUiService.show(
-            //            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-//            render(
-//                    view: "asciidocReveal${vers ?: '5'}",
-//                    model: [
-//                            pageAsciidocContent: prez.text,
-//                            theme              : doc.theme,
-//                            menu               : taackUiService.visitMenu(buildMenu())
-//                    ])
+            taackUiService.show(new UiBlockSpecifier().ui {
+                modal {
+                    String r = intercomUiService.renderReveal(doc)
+                    custom(r)
+                }
+            })
+
         } else {
-//            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-//            render(view: "asciidoc", model: [pageAsciidocContent: prez.text,
-//                                             menu               : taackUiService.visitMenu(buildMenu())])
+            taackUiService.show(new UiBlockSpecifier().ui {
+                modal {
+                    String r = intercomUiService.renderAsciidoc(doc)
+                    custom(r)
+                }
+            })
+
         }
     }
 

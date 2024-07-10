@@ -233,7 +233,7 @@ class IntercomUiService implements WebAttributes {
         }
     }
 
-    def renderReveal(IntercomRepoDoc doc) {
+    String renderReveal(IntercomRepoDoc doc) {
         def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
         g.render(
                 view: "asciidocReveal5",
@@ -241,12 +241,11 @@ class IntercomUiService implements WebAttributes {
                         pageAsciidocContent: prez.text,
                         theme              : doc.theme,
                 ])
-
     }
 
-    def renderAsciidoc(IntercomRepoDoc doc) {
+    String renderAsciidoc(IntercomRepoDoc doc) {
         def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-        g.render(view: "asciidoc", model: [pageAsciidocContent: prez.text])
+        g.render(template: "/intercom/asciidocInline", model: [pageAsciidocContent: prez.text])
     }
 
     Closure<BlockSpec> buildBlockAsciidocModal(IAsciidocAnchorRef ref) {
