@@ -106,6 +106,7 @@ class IntercomAsciidoctorConverterService {
                 result.close()
             } catch (e) {
                 log.error "Cannot clone local repo ${gitRootPath + '/' + doc.intercomRepo.name}: ${e.message}"
+                throw e
             }
         } else {
             try {
@@ -131,6 +132,7 @@ class IntercomAsciidoctorConverterService {
                 git.close()
             } catch (e) {
                 log.error "Cannot clone local repo ${gitRootPath + '/' + doc.intercomRepo.name}: ${e.message}"
+                throw e
             }
         }
         processIndexFile(doc, pdfMode)

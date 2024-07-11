@@ -210,9 +210,13 @@ class IntercomController {
                 taackUiProgressBarService.progress(pId, 50)
             } catch (e) {
                 log.error(e.message)
-            } finally {
-                taackUiProgressBarService.progressEnded(pId)
+                taackUiProgressBarService.progressEndedClosure(pId, BlockSpec.buildBlockSpec({
+                    show(new UiShowSpecifier().ui {
+                        inlineHtml("Error: ${e.message}")
+                    })
+                }))
             }
+            taackUiProgressBarService.progressEnded(pId)
         }
     }
 
