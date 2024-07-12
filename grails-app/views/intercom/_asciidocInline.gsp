@@ -25,12 +25,12 @@
 <script id="script" type="application/javascript">
     const asciidocMain = document.getElementById("asciidocMain")
     let divModal = asciidocMain.parentElement;
-    window.onscroll = function () {
-        scrollWindow();
-    };
-    window.onresize = function () {
-        resizeWindow()
-    };
+    // window.onscroll = function () {
+    //     scrollWindow();
+    // };
+    // window.onresize = function () {
+    //     resizeWindow()
+    // };
 
     const navbar = document.getElementById("toc");
     const asciidoctor = document.getElementById("asciidoctor");
@@ -38,7 +38,7 @@
     let stickyMode = divModal.clientWidth > 768;
     let navbarItems = navbar?.getElementsByTagName('a');
     let scrollItems = new Array(navbarItems?.length);
-    let sticky = navbar.offsetTop;
+    let sticky = navbar?.offsetTop;
     if (navbarItems) {
         for (let i = 0; i < navbarItems.length; i++) {
             let item = navbarItems[i];

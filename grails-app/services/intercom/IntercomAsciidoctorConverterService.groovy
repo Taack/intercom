@@ -39,6 +39,8 @@ class IntercomAsciidoctorConverterService {
     @Value('${exe.vega.bin}')
     String vegaBinPath
 
+    private Random random = new Random()
+
     @PostConstruct
     private void init() {
         FileUtils.forceMkdir(new File(gitRootPath))
@@ -213,10 +215,11 @@ class IntercomAsciidoctorConverterService {
         asciidoctor.registerLogHandler(new LogHandler() { // (1)
             @Override
             void log(LogRecord logRecord) {
-                //println(logRecord.getMessage())
-                logRecord.getMessage()
+                println(logRecord.getMessage())
+                //logRecord.getMessage()
             }
         })
+        asciidoctor.javaExtensionRegistry().blockMacro(new SlideBlockMacroProcessor(outputTree))
 
         StringBuffer indexFileTransformed = new StringBuffer()
         boolean contextStartWithGnuplot = false
@@ -259,15 +262,21 @@ class IntercomAsciidoctorConverterService {
         })
 
         OptionsBuilder optionHasToc = Options.builder().option('parse_header_only', true)
-        boolean hasToc = asciidoctor.load(indexFile.text, optionHasToc.build()).hasAttribute('toc')
+        def loadedDoc = asciidoctor.load(indexFile.text, optionHasToc.build())
+        boolean hasToc = loadedDoc.hasAttribute('toc')
+        String taackCategory = loadedDoc.attributes['taack-category']
+        Integer height = loadedDoc.attributes['taack-height']?.toString()?.toInteger()
+        Integer id = (loadedDoc.attributes['taack-id']?.toString()?.toInteger() ?: random.nextInt((10 ** 5) as Integer)) as Integer
         AttributesBuilder attributes = Attributes.builder()
                 .backend("${useRevealJS ? 'revealjs' : pdfMode ? 'pdf' : 'html5'}")
                 .title(doc.abstractDesc)
+                .attribute("revealjsdir", "/assets")
                 .attribute('vg2png', vegaBinPath + '/vg2png')
                 .attribute('vg2svg', vegaBinPath + '/vg2svg')
 
         OptionsBuilder options = Options.builder()
                 .safe(SafeMode.UNSAFE)//.inPlace(true)
+                .standalone(false)
                 .baseDir(new File("${contentTree}/${rpd}"))
 
         if (hasToc) {
@@ -276,7 +285,6 @@ class IntercomAsciidoctorConverterService {
         }
 
         if (!pdfMode) {
-
             attributes.attribute("webrootpath", "${outputTree}/${rpd}" as String)
                     .attribute("webimagesdir", "/intercom/media/${doc.id}?rdp=${rpd}" as String)
                     .attribute("datadir", "${contentTree}/${rpd}/data" as String)
@@ -289,10 +297,16 @@ class IntercomAsciidoctorConverterService {
             asciidoctor.shutdown()
 
             if (hasToc) stringHtml = stringHtml.substring(stringHtml.indexOf("</style>") + 8)
+            if (useRevealJS) {
+                stringHtml = decorateSlideshow(stringHtml, height, id)
+                println "REVEAL.JS $stringHtml"
+            }
 
+            if (html.exists()) html.delete()
             FileUtils.touch(html)
             stringHtml = convertMediaToWebFormat(doc, stringHtml)
-            html.setText(stringHtml, "UTF-8")
+            println "REVEAL.JS2 ${html.name} $stringHtml"
+            html << stringHtml
         } else {
             attributes.attribute("pdf-theme", "${taackUiConfiguration.root}/pdf/asciidoctor-pdf-themes/citel.yml" as String)
                     .attribute("pdf-fontsdir", "${taackUiConfiguration.root}/pdf/fonts;GEM_FONTS_DIR" as String)
@@ -342,11 +356,6 @@ class IntercomAsciidoctorConverterService {
         final String outputTree = docOutputTree(doc)
         final String inputTree = docContentTree(doc)
 
-        println "AUO rpd = $rpd"
-        println "AUO outputTree = $outputTree"
-        println "AUO inputTree = $inputTree"
-        println "htmlContent = $htmlContent"
-
         (htmlContent =~ /(?ms)( src="\/intercom\/media\/${doc.id}\?rdp=)${rpd}([a-z0-9\-\/]*)\.(png|jpeg|jpg)"/).findAll().each {
             final m = it as ArrayList<String>
             final toChange = m[0]
@@ -370,10 +379,6 @@ class IntercomAsciidoctorConverterService {
             final fileNameSuffix = m[3]
             final fileNamePrefix = pathPrefix.split('/').last()
             final inputImgPath = new File("$inputTree/${rpd}/${pathPrefix}.${fileNameSuffix}").exists() ? "$inputTree/${rpd}/${pathPrefix}.${fileNameSuffix}" : "$outputTree/${pathPrefix}.${fileNameSuffix}"
-            println "AUO $inputImgPath"
-            println "AUO $fileNamePrefix"
-            println "AUO $fileNameSuffix"
-            println "AUO $toChange"
             Process copy = Runtime.getRuntime().exec(["/usr/bin/cp", inputImgPath, "$outputTree/${fileNamePrefix}.${fileNameSuffix}"] as String[])
             final processError = copy.errorStream.text
             int retCode = copy.waitFor()
@@ -389,10 +394,6 @@ class IntercomAsciidoctorConverterService {
             final fileNameSuffix = m[3]
             final fileNamePrefix = pathPrefix.split('/').last()
             final inputImgPath = new File("$inputTree/${rpd}/${pathPrefix}.${fileNameSuffix}").exists() ? "$inputTree/${rpd}/${pathPrefix}.${fileNameSuffix}" : "$outputTree/${pathPrefix}.${fileNameSuffix}"
-            println "AUO $inputImgPath"
-            println "AUO $fileNamePrefix"
-            println "AUO $fileNameSuffix"
-            println "AUO $toChange"
             Process copy = Runtime.getRuntime().exec(["/usr/bin/cp", inputImgPath, "$outputTree/${fileNamePrefix}.${fileNameSuffix}"] as String[])
             final processError = copy.errorStream.text
             int retCode = copy.waitFor()
@@ -425,5 +426,49 @@ class IntercomAsciidoctorConverterService {
         doc.docTitle = document.doctitle
         doc.authors = document.getAuthors().join(', ')
         doc.subtitle = document.structuredDoctitle.subtitle
+    }
+
+    private static String decorateSlideshow(String slideshowContent, Integer height, int id = 1) {
+        return """
+            <div style="height: ${height ?: 512}px;">
+<style src="/assets/custom-reveal.css"></style>
+                <div class="reveal deck${id ?: 1}">
+                    <div class="slides">
+                        ${slideshowContent}
+                    </div>
+                </div>
+            </div>
+<script src="/assets/dist/reveal.js"></script>
+<script src="/assets/plugin/highlight/highlight.js"></script>
+<script src="/assets/plugin/zoom/zoom.js"></script>
+<script postExecute="true">
+    // More info about initialization & config:
+    // - https://revealjs.com/initialization/
+    // - https://revealjs.com/config/
+    if (typeof Reveal != 'undefined' && document.querySelector( '.deck${id ?: 1}' )) {
+        let deck1 = Reveal(document.querySelector( '.deck${id ?: 1}' ), {
+            embedded: true,
+            keyboardCondition: 'focused' // only react to keys when focused
+        })
+        deck1.initialize({
+            hash: false,
+            fragments: true,
+            fragmentInURL: false,
+            loop: true,
+            transition: 'default',
+            transitionSpeed: 'default',
+            backgroundTransition: 'default',
+            viewDistance: 3,
+            width: 960,
+            height: ${height ?: 512},
+            controls: true,
+            progress: true,
+            autoSlide: 4000,
+            plugins: [RevealHighlight, RevealZoom]
+        });
+    }
+    
+</script>
+        """
     }
 }

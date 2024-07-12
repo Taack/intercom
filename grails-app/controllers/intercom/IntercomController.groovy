@@ -143,22 +143,24 @@ class IntercomController {
     }
 
     def viewDoc(IntercomRepoDoc doc, String vers) {
+        if (!doc) return false
         if (doc.kind == IntercomDocumentKind.SLIDESHOW) {
             taackUiService.show(new UiBlockSpecifier().ui {
-                modal {
                     String r = intercomUiService.renderReveal(doc)
                     custom(r)
-                }
-            })
-
+            }, buildMenu())
         } else {
             taackUiService.show(new UiBlockSpecifier().ui {
-                modal {
-                    String r = intercomUiService.renderAsciidoc(doc)
-                    custom(r)
-                }
-            })
+                row {
+                    col BlockSpec.Width.QUARTER, {
 
+                    }
+                    col {
+                        String r = intercomUiService.renderAsciidoc(doc)
+                        custom(r)
+                    }
+                }
+            }, buildMenu())
         }
     }
 
@@ -206,7 +208,7 @@ class IntercomController {
                 def prez = intercomAsciidoctorConverterService.processDoc(doc)
                 intercomAsciidoctorConverterService.refreshDocMetaData(doc)
                 taackUiProgressBarService.progress(pId, 50)
-                if (doc.kind == IntercomDocumentKind.SLIDESHOW) intercomAsciidoctorConverterService.processDoc(doc, true)
+                //intercomAsciidoctorConverterService.processDoc(doc, true)
                 taackUiProgressBarService.progress(pId, 50)
             } catch (e) {
                 log.error(e.message)
