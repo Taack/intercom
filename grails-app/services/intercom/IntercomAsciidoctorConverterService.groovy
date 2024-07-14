@@ -430,22 +430,19 @@ class IntercomAsciidoctorConverterService {
 
     private static String decorateSlideshow(String slideshowContent, Integer height, int id = 1) {
         return """
-            <div style="height: ${height ?: 512}px;">
 <style src="/assets/custom-reveal.css"></style>
+            <div style="height: ${height ?: 512}px;">
                 <div class="reveal deck${id ?: 1}">
                     <div class="slides">
                         ${slideshowContent}
                     </div>
                 </div>
             </div>
-<script src="/assets/dist/reveal.js"></script>
-<script src="/assets/plugin/highlight/highlight.js"></script>
-<script src="/assets/plugin/zoom/zoom.js"></script>
 <script postExecute="true">
     // More info about initialization & config:
     // - https://revealjs.com/initialization/
     // - https://revealjs.com/config/
-    if (typeof Reveal != 'undefined' && document.querySelector( '.deck${id ?: 1}' )) {
+    if (typeof Reveal != 'undefined' && document.querySelector( '.deck${id ?: 1}' ) && document.querySelectorAll(".deck${id ?: 1} canvas").length < 1) {
         let deck${id ?: 1} = Reveal(document.querySelector( '.deck${id ?: 1}' ), {
             embedded: true,
             keyboardCondition: 'focused' // only react to keys when focused

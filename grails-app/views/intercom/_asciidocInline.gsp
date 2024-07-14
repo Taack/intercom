@@ -6,8 +6,9 @@
 --%>
 
 <%@ page contentType="text/html;charset=UTF-8" %>
-<asset:stylesheet src="font-awesome.css"/>
 <asset:stylesheet src="intercom.css"/>
+<asset:javascript src="custom-reveal.js"/>
+
 <style>
 #asciidoctor {
     letter-spacing: normal;
