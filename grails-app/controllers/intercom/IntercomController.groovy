@@ -55,24 +55,6 @@ class IntercomController {
     TaackUiProgressBarService taackUiProgressBarService
     IntercomSearchService intercomSearchService
 
-    protected boolean isDirector() {
-        final User u = authenticatedUser as User
-        return u.authorities*.authority.contains('ROLE_INTERCOM_DIRECTOR')
-    }
-
-    protected boolean isManager() {
-        final User u = authenticatedUser as User
-        return u.authorities*.authority.contains('ROLE_INTERCOM_MANAGER')
-    }
-
-    protected boolean isUser() {
-        final User u = authenticatedUser as User
-        return u.authorities*.authority.contains('ROLE_INTERCOM_USER')
-    }
-
-    protected boolean isAdmin() {
-        return (authenticatedUser as User).authorities*.authority.contains('ROLE_ADMIN')
-    }
 
     protected IntercomUser currentIntercomUser() {
         final User u = authenticatedUser as User
@@ -131,8 +113,8 @@ class IntercomController {
         new UiFormSpecifier().ui doc, {
             hiddenField(doc.intercomRepo_)
             section 'Doc', {
-                ajaxField doc.documentAccess_, AttachmentController.&selectDocumentAccess as MC //TODO
-                ajaxField doc.documentCategory_, AttachmentController.&selectDocumentCategory as MC //TODO
+                ajaxField doc.documentAccess_, AttachmentController.&selectDocumentAccess as MC
+                ajaxField doc.documentCategory_, AttachmentController.&selectDocumentCategory as MC
                 field doc.kind_
                 field doc.abstractDesc_
                 field doc.baseFilePath_
@@ -142,7 +124,7 @@ class IntercomController {
         }
     }
 
-    def viewDoc(IntercomRepoDoc doc, String vers) {
+    def viewDoc(IntercomRepoDoc doc) {
         if (!doc) return false
         if (doc.kind == IntercomDocumentKind.SLIDESHOW) {
             taackUiService.show(new UiBlockSpecifier().ui {
@@ -155,7 +137,7 @@ class IntercomController {
                     col BlockSpec.Width.QUARTER, {
 
                     }
-                    col {
+                    col BlockSpec.Width.THREE_QUARTER, {
                         String r = intercomUiService.renderAsciidoc(doc)
                         custom(r)
                     }

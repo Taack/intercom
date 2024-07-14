@@ -5,6 +5,7 @@ import org.asciidoctor.ast.StructuralNode;
 import org.asciidoctor.extension.BlockMacroProcessor;
 import org.asciidoctor.extension.Name;
 
+import javax.management.BadAttributeValueExpException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -32,6 +33,8 @@ public class SlideBlockMacroProcessor extends BlockMacroProcessor {
                 throw new RuntimeException(e);
             }
             return createBlock(parent, "pass", content);
+        } else {
+            System.out.println("File not found: " + fn);
         }
         return null;
     }

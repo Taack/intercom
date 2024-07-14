@@ -296,7 +296,7 @@ class IntercomAsciidoctorConverterService {
             stringHtml = document.convert()
             asciidoctor.shutdown()
 
-            if (hasToc) stringHtml = stringHtml.substring(stringHtml.indexOf("</style>") + 8)
+//            if (hasToc) stringHtml = stringHtml.substring(stringHtml.indexOf("</style>") + 8)
             if (useRevealJS) {
                 stringHtml = decorateSlideshow(stringHtml, height, id)
                 println "REVEAL.JS $stringHtml"
@@ -446,11 +446,11 @@ class IntercomAsciidoctorConverterService {
     // - https://revealjs.com/initialization/
     // - https://revealjs.com/config/
     if (typeof Reveal != 'undefined' && document.querySelector( '.deck${id ?: 1}' )) {
-        let deck1 = Reveal(document.querySelector( '.deck${id ?: 1}' ), {
+        let deck${id ?: 1} = Reveal(document.querySelector( '.deck${id ?: 1}' ), {
             embedded: true,
             keyboardCondition: 'focused' // only react to keys when focused
         })
-        deck1.initialize({
+        deck${id ?: 1}.initialize({
             hash: false,
             fragments: true,
             fragmentInURL: false,
@@ -464,10 +464,9 @@ class IntercomAsciidoctorConverterService {
             controls: true,
             progress: true,
             autoSlide: 4000,
-            plugins: [RevealHighlight, RevealZoom]
+            plugins: [RevealHighlight]
         });
     }
-    
 </script>
         """
     }
