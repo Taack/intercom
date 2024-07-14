@@ -327,3 +327,8 @@ pre.rouge {
 #asciidoctor .reveal p {
     font-size: inherit;
 }
+
+#asciidoctor pre.rouge {
+    font-size: inherit;
+    color: #e6db74;
+}
