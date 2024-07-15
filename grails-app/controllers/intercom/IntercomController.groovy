@@ -128,21 +128,11 @@ class IntercomController {
         if (!doc) return false
         if (doc.kind == IntercomDocumentKind.SLIDESHOW) {
             taackUiService.show(new UiBlockSpecifier().ui {
-                    String r = intercomUiService.renderReveal(doc)
-                    custom(r)
+                String r = intercomUiService.renderReveal(doc)
+                custom(r)
             }, buildMenu())
         } else {
-            taackUiService.show(new UiBlockSpecifier().ui {
-                row {
-                    col BlockSpec.Width.QUARTER, {
-
-                    }
-                    col BlockSpec.Width.THREE_QUARTER, {
-                        String r = intercomUiService.renderAsciidoc(doc)
-                        custom(r)
-                    }
-                }
-            }, buildMenu())
+            taackUiService.show(intercomUiService.renderAsciidoc(doc), buildMenu())
         }
     }
 

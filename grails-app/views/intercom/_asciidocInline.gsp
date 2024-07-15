@@ -24,13 +24,11 @@
 }
 </style>
 
-<main id="asciidocMain" class="article">
-    <div id="asciidoctor" class="asciidoctor">
-        <div class="toc2">
-            ${raw(pageAsciidocContent)}
-        </div>
-    </div>
-</main>
+%{--<main id="asciidocMain" class="article">--}%
+%{--    <div id="asciidoctor" class="asciidoctor">--}%
+        ${raw(pageAsciidocContent)}
+%{--    </div>--}%
+%{--</main>--}%
 
 <script postExecute="true">
     function manageAsciidoc() {

@@ -2,6 +2,7 @@ package intercom
 
 import grails.compiler.GrailsCompileStatic
 import grails.gorm.transactions.Transactional
+import grails.util.Triple
 import org.apache.commons.io.FileUtils
 import org.asciidoctor.*
 import org.asciidoctor.ast.Document
@@ -194,7 +195,7 @@ class IntercomAsciidoctorConverterService {
         final String htmlFilePath = rp.replace('.adoc', pdfMode ? '.pdf' : '.html')
         final String outputTree = docOutputTree(doc)
         final String contentTree = docContentTree(doc)
-        String stringHtml
+        String bodyHtml
         File html = new File("${outputTree}/${htmlFilePath}")
         Slideshow slideshow = null
         Asciidoctor asciidoctor = initAsciidoctorJ()
@@ -219,7 +220,11 @@ class IntercomAsciidoctorConverterService {
                 //logRecord.getMessage()
             }
         })
-        asciidoctor.javaExtensionRegistry().blockMacro(new SlideBlockMacroProcessor(outputTree))
+
+        List<Triple<String, String, Integer>> menus = []
+        asciidoctor.javaExtensionRegistry()
+                .blockMacro(new SlideBlockMacroProcessor(outputTree))
+                .treeprocessor(new MenuTreeprocessor(menus))
 
         StringBuffer indexFileTransformed = new StringBuffer()
         boolean contextStartWithGnuplot = false
@@ -264,9 +269,10 @@ class IntercomAsciidoctorConverterService {
         OptionsBuilder optionHasToc = Options.builder().option('parse_header_only', true)
         def loadedDoc = asciidoctor.load(indexFile.text, optionHasToc.build())
         boolean hasToc = loadedDoc.hasAttribute('toc')
+
         String taackCategory = loadedDoc.attributes['taack-category']
         Integer height = loadedDoc.attributes['taack-height']?.toString()?.toInteger()
-        Integer id = (loadedDoc.attributes['taack-id']?.toString()?.toInteger() ?: random.nextInt((10 ** 5) as Integer)) as Integer
+        Integer id = (loadedDoc.attributes['taack-id']?.toString()?.toInteger() ?: random.nextInt((10**5) as Integer)) as Integer
         AttributesBuilder attributes = Attributes.builder()
                 .backend("${useRevealJS ? 'revealjs' : pdfMode ? 'pdf' : 'html5'}")
                 .title(doc.abstractDesc)
@@ -289,24 +295,39 @@ class IntercomAsciidoctorConverterService {
                     .attribute("webimagesdir", "/intercom/media/${doc.id}?rdp=${rpd}" as String)
                     .attribute("datadir", "${contentTree}/${rpd}/data" as String)
                     .attribute("source-highlighter", "rouge")
+                    .tableOfContents(false)
 
             options.attributes(attributes.build())
             Document document = asciidoctor.load(indexFile.text, options.build())
-//        dumpDoc(document)
-            stringHtml = document.convert()
-            asciidoctor.shutdown()
 
-//            if (hasToc) stringHtml = stringHtml.substring(stringHtml.indexOf("</style>") + 8)
+            bodyHtml = document.convert()
+            asciidoctor.shutdown()
             if (useRevealJS) {
-                stringHtml = decorateSlideshow(stringHtml, height, id)
-                println "REVEAL.JS $stringHtml"
-            }
+                bodyHtml = decorateSlideshow(bodyHtml, height, id)
+            } else {
+                String menuHtml = buildMenus(loadedDoc.title, menus)
+                println "AUO menus = $menuHtml"
+                bodyHtml = """\
+                    <div id="asciidoctorMenu" class="col-12 col-sm-6 col-md-4 toc toc2 asciidoctor" style="position: sticky; top: 0;float: left;max-height: 100vh;
+    overflow-x: scroll;">
+                            $menuHtml
+                    </div>
+
+                    <div id="asciidoctor" taacktag="COL" class="row g-2 asciidoctor">
+                        <div class="col-12">    
+                            <main id="asciidocMain" class="article">
+                            ${bodyHtml}
+                            </main>
+                        </div>
+                    </div>
+                    """.stripIndent()
+        }
 
             if (html.exists()) html.delete()
             FileUtils.touch(html)
-            stringHtml = convertMediaToWebFormat(doc, stringHtml)
-            println "REVEAL.JS2 ${html.name} $stringHtml"
-            html << stringHtml
+            bodyHtml = convertMediaToWebFormat(doc, bodyHtml)
+
+            html << bodyHtml
         } else {
             attributes.attribute("pdf-theme", "${taackUiConfiguration.root}/pdf/asciidoctor-pdf-themes/citel.yml" as String)
                     .attribute("pdf-fontsdir", "${taackUiConfiguration.root}/pdf/fonts;GEM_FONTS_DIR" as String)
@@ -339,15 +360,9 @@ class IntercomAsciidoctorConverterService {
     }
 
     final File retrieveIndexFile(final IntercomRepoDoc doc, boolean pdfMode = false) {
-        final useRevealJS = doc.kind == IntercomDocumentKind.SLIDESHOW
-
-        final File indexFile = new File(docPath(doc))
-        final String rpd = docRelativeDirPath(doc)
         final String rp = docRelativeFilePath(doc)
         final String htmlFilePath = rp.replace('.adoc', pdfMode ? '.pdf' : '.html')
         final String outputTree = docOutputTree(doc)
-        final String contentTree = docContentTree(doc)
-        String stringHtml
         new File("${outputTree}/${htmlFilePath}")
     }
 
@@ -466,5 +481,26 @@ class IntercomAsciidoctorConverterService {
     }
 </script>
         """
+    }
+
+    String buildMenus(String title, List<Triple<String, String, Integer>> menus) {
+        StringBuffer nav = new StringBuffer(1024)
+        nav.append("""<div id="toctitle">${title}</div>""")
+        int lastLevel = 0
+        nav.append('<ul class="sectlevel1">\n')
+        for (Triple<String, String, Integer> m in menus) {
+            if (lastLevel < m.cValue) {
+                nav.append("<ul class=\"sectlevel${m.cValue+1}\">")
+            } else if (lastLevel > m.cValue) {
+                nav.append('</ul>')
+            }
+            nav.append("""\
+                <li>
+                    <a href="#${m.bValue}">${m.aValue}</a>
+                </li>
+            """.stripIndent())
+            lastLevel = m.cValue
+        }
+        nav.append('</ul>')
     }
 }
