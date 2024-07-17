@@ -16,12 +16,15 @@ import org.eclipse.jgit.lib.PersonIdent
 import org.eclipse.jgit.revwalk.RevCommit
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import taack.domain.TaackJdbcService
 import taack.ui.TaackUiConfiguration
 
 import javax.annotation.PostConstruct
 
 @GrailsCompileStatic
 class IntercomAsciidoctorConverterService {
+
+    TaackJdbcService taackJdbcService
 
     @Value('${intranet.root}')
     String intranetRoot
@@ -179,8 +182,10 @@ class IntercomAsciidoctorConverterService {
             try {
                 asciidoctor = Asciidoctor.Factory.create()
             } catch (Exception e) {
+                e.printStackTrace()
                 println e
             } catch (Throwable t) {
+                t.printStackTrace()
                 println t
             }
         asciidoctor
@@ -225,6 +230,7 @@ class IntercomAsciidoctorConverterService {
         asciidoctor.javaExtensionRegistry()
                 .blockMacro(new SlideBlockMacroProcessor(outputTree))
                 .treeprocessor(new MenuTreeprocessor(menus))
+                .block(new TqlBlockProcessor(taackJdbcService))
 
         StringBuffer indexFileTransformed = new StringBuffer()
         boolean contextStartWithGnuplot = false
