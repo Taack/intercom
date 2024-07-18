@@ -37,6 +37,11 @@ class IntercomUiService implements WebAttributes {
         crewSecurityService.canEdit(User.read(id))
     }
 
+    private noPdfForSlideshow(Long id, Map p) {
+        if (!id) return true
+        IntercomRepoDoc.read(id).kind != IntercomDocumentKind.SLIDESHOW
+    }
+
     @PostConstruct
     void init() {
         TaackUiEnablerService.securityClosure(
@@ -44,6 +49,9 @@ class IntercomUiService implements WebAttributes {
                 IntercomController.&createIntercomUser as MC,
                 IntercomController.&saveIntercomUser as MC,
                 CrewController.&saveUser as MC)
+        TaackUiEnablerService.securityClosure(
+                this.&noPdfForSlideshow,
+                IntercomController.&downloadBinDoc as MC)
     }
 
     Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomUserList(boolean selectMode = false) {
@@ -209,15 +217,11 @@ class IntercomUiService implements WebAttributes {
                 rowColumn {
                     if (doc.lastRevAuthor) {
                         rowAction ActionIcon.SHOW * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id
-
-                        if (doc.kind == IntercomDocumentKind.PAGE)
-                            rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&downloadBinDoc as MC, doc.id
-                        else if (doc.kind == IntercomDocumentKind.SLIDESHOW)
-                            rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id, ["print-pdf": true]
+                        rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&downloadBinDoc as MC, doc.id
                     }
                     rowAction ActionIcon.DETAILS * IconStyle.SCALE_DOWN, IntercomController.&histDoc as MC, doc.id
                     rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editDoc as MC, doc.id
-                    rowAction ActionIcon.REFRESH  * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
+                    rowAction ActionIcon.REFRESH * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
                 }
             }
         }

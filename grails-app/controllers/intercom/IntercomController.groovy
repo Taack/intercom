@@ -2,28 +2,23 @@ package intercom
 
 import attachment.DocumentCategory
 import crew.AttachmentController
-import crew.config.SupportedLanguage
 import crew.CrewUiService
+import crew.User
+import crew.config.SupportedLanguage
 import grails.compiler.GrailsCompileStatic
 import grails.gorm.transactions.Transactional
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.plugin.springsecurity.annotation.Secured
 import org.codehaus.groovy.runtime.MethodClosure as MC
-import crew.User
 import taack.domain.TaackSaveService
 import taack.render.TaackUiProgressBarService
 import taack.render.TaackUiService
-import taack.ui.dsl.UiBlockSpecifier
-import taack.ui.dsl.UiFormSpecifier
-import taack.ui.dsl.UiMenuSpecifier
-import taack.ui.dsl.UiShowSpecifier
-import taack.ui.dsl.UiTableSpecifier
+import taack.ui.dsl.*
 import taack.ui.dsl.block.BlockSpec
 import taack.ui.dsl.common.ActionIcon
 import taack.ui.dump.markdown.Markdown
 
 import static grails.async.Promises.task
-
 /**
  * Independent App Managing Documentation via Git
  * Functionalities:
@@ -150,7 +145,7 @@ class IntercomController {
         def listOfRev = intercomAsciidoctorConverterService.docHistory(doc)
         taackUiService.show(new UiBlockSpecifier().ui {
             modal {
-                new UiTableSpecifier().ui({
+                table new UiTableSpecifier().ui({
                     for (String rev in listOfRev) row {
                         rowField rev
                     }
@@ -177,11 +172,14 @@ class IntercomController {
         }, 100)
         task {
             try {
-                def prez = intercomAsciidoctorConverterService.processDoc(doc)
-                intercomAsciidoctorConverterService.refreshDocMetaData(doc)
-                taackUiProgressBarService.progress(pId, 50)
-                //intercomAsciidoctorConverterService.processDoc(doc, true)
-                taackUiProgressBarService.progress(pId, 50)
+                User.withNewSession {
+                    def prez = intercomAsciidoctorConverterService.processDoc(doc)
+                    intercomAsciidoctorConverterService.refreshDocMetaData(doc)
+                    taackUiProgressBarService.progress(pId, 50)
+                    if (doc.kind == IntercomDocumentKind.PAGE)
+                        intercomAsciidoctorConverterService.processDoc(doc, true)
+                    taackUiProgressBarService.progress(pId, 50)
+                }
             } catch (e) {
                 log.error(e.message)
                 e.printStackTrace()
