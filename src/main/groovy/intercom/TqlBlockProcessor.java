@@ -16,7 +16,7 @@ import java.util.Map;
 @CompileStatic
 @Name("tql")
 @Contexts({Contexts.LISTING})
-@ContentModel(ContentModel.SIMPLE)
+@ContentModel(ContentModel.RAW)
 class TqlBlockProcessor extends BlockProcessor {
 
     final TaackJdbcService taackJdbcService;
@@ -61,7 +61,13 @@ class TqlBlockProcessor extends BlockProcessor {
                         case DATE -> c = createTableCell(columns[j], res.getCells(index).getDateValue() + "");
                         case LONG -> c = createTableCell(columns[j], res.getCells(index).getLongValue() + "");
                         case BIG_DECIMAL -> c = createTableCell(columns[j], res.getCells(index).getBigDecimal() + "");
-                        case STRING -> c = createTableCell(columns[j], res.getCells(index).getStringValue() + "");
+                        case STRING -> {
+                            String cc = res.getCells(index).getStringValue();
+                            if (cc.startsWith("<")) {
+                                cc = "\n+++\n" + cc + "\n+++\n";
+                                c = createTableCell(columns[j], cc);
+                            } else c = createTableCell(columns[j], cc + "");
+                        }
                         case BOOL -> c = createTableCell(columns[j], res.getCells(index).getBoolValue() + "");
                         case BYTE -> c = createTableCell(columns[j], res.getCells(index).getByteValue() + "");
                         case SHORT -> c = createTableCell(columns[j], res.getCells(index).getShortValue() + "");
