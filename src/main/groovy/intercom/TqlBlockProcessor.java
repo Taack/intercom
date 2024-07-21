@@ -29,7 +29,7 @@ class TqlBlockProcessor extends BlockProcessor {
     public Object process(StructuralNode parent, Reader reader, Map<String, Object> attributes) {
         String content = reader.read();
         System.out.println("TQL " + content);
-        TQLTranslator t = null;
+        TQLTranslator t;
         try {
             t = TaackJdbcService.translatorFromTql(content);
         } catch (TaackJdbcError e) {
