@@ -1,17 +1,26 @@
 package intercom;
 
 import groovy.transform.CompileStatic;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ConsoleErrorListener;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.asciidoctor.ast.*;
 import org.asciidoctor.extension.BlockProcessor;
 import org.asciidoctor.extension.Contexts;
 import org.asciidoctor.extension.Name;
 import org.asciidoctor.extension.Reader;
 import taack.domain.TaackJdbcService;
+import taack.jdbc.TaackANTLRErrorListener;
 import taack.jdbc.TaackJdbcError;
 import taack.jdbc.common.TaackResultSetOuterClass;
+import taack.jdbc.common.tql.gen.TDLLexer;
+import taack.jdbc.common.tql.gen.TDLParser;
+import taack.jdbc.common.tql.listener.TDLTranslator;
 import taack.jdbc.common.tql.listener.TQLTranslator;
 
 import java.util.Map;
+import java.util.SortedMap;
 
 @CompileStatic
 @Name("tql")
@@ -28,10 +37,12 @@ class TqlBlockProcessor extends BlockProcessor {
     @Override
     public Object process(StructuralNode parent, Reader reader, Map<String, Object> attributes) {
         String content = reader.read();
-        System.out.println("TQL " + content);
+        String[] contentSplit = content.split("--");
+        String tql = contentSplit[0];
+        System.out.println("TQL " + tql);
         TQLTranslator t;
         try {
-            t = TaackJdbcService.translatorFromTql(content);
+            t = TaackJdbcService.translatorFromTql(tql);
         } catch (TaackJdbcError e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
@@ -41,48 +52,92 @@ class TqlBlockProcessor extends BlockProcessor {
         if (t.errors.isEmpty()) {
             TaackResultSetOuterClass.TaackResultSet res = taackJdbcService.protoFromTranslator(t, 20, 0);
             int lineCount = res.getCellsCount() / res.getColumnsCount();
-
-            Table table = createTable(parent);
-
-            Column[] columns = new Column[res.getColumnsCount()];
-            Row rh = createTableRow(table);
-            for(int i = 0; i < res.getColumnsCount(); i++) {
-                columns[i] = createTableColumn(table, i);
-                rh.getCells().add(createTableCell(columns[i], res.getColumns(i).getName()));
-            }
-            table.getHeader().add(rh);
-
-            for (int i = 0; i < lineCount; i++) {
-                Row r = createTableRow(table);
-                for (int j = 0; j < res.getColumnsCount(); j++) {
-                    int index = i * res.getColumnsCount() + j;
-                    Cell c = null;
-                    switch (res.getColumns(j).getJavaType()) {
-                        case DATE -> c = createTableCell(columns[j], res.getCells(index).getDateValue() + "");
-                        case LONG -> c = createTableCell(columns[j], res.getCells(index).getLongValue() + "");
-                        case BIG_DECIMAL -> c = createTableCell(columns[j], res.getCells(index).getBigDecimal() + "");
-                        case STRING -> {
-                            String cc = res.getCells(index).getStringValue();
-                            if (cc.startsWith("<")) {
-                                cc = "\n+++\n" + cc + "\n+++\n";
-                                c = createTableCell(columns[j], cc);
-                            } else c = createTableCell(columns[j], cc + "");
-                        }
-                        case BOOL -> c = createTableCell(columns[j], res.getCells(index).getBoolValue() + "");
-                        case BYTE -> c = createTableCell(columns[j], res.getCells(index).getByteValue() + "");
-                        case SHORT -> c = createTableCell(columns[j], res.getCells(index).getShortValue() + "");
-                        case INT -> c = createTableCell(columns[j], res.getCells(index).getIntValue() + "");
-                        case BYTES -> c = createTableCell(columns[j], res.getCells(index).getBytesValue() + "");
-                        case UNRECOGNIZED -> System.out.println("|UNRECOGNIZED " + columns[j]);
+            if (contentSplit.length > 1) {
+//            Block outterBlock = createBlock(parent, "div", "");
+                for (int i = 1; i < contentSplit.length; i++) {
+                    String tdl = contentSplit[i].strip();
+                    System.out.println("TDL " + tdl);
+                    TDLTranslator tdlTranslator = translatorFromTdl(tdl);
+                    if (tdlTranslator.kind == TDLTranslator.Kind.TABLE) {
+                        return tdlTable(parent, res, lineCount, tdlTranslator.cols);
+                    } else {
+                        return null;
                     }
-                    r.getCells().add(c);
                 }
-                table.getBody().add(r);
+            } else {
+                return tdlTable(parent, res, lineCount, null);
             }
-            return table;
         } else {
             System.out.println("Errors " + t.errors);
             return createBlock(parent, "paragraph", t.errors.toString(), attributes);
         }
+        return null;
     }
+
+    private Table tdlTable(StructuralNode parent, TaackResultSetOuterClass.TaackResultSet res, int lineCount, SortedMap<String, String> cols) {
+        Table table = createTable(parent);
+
+        Column[] columns = new Column[res.getColumnsCount()];
+        Row rh = createTableRow(table);
+        for(int i = 0; i < res.getColumnsCount(); i++) {
+            columns[i] = createTableColumn(table, i);
+            String name = res.getColumns(i).getName();
+            if (cols != null && cols.containsKey(name)) {
+                name = cols.get(name);
+            }
+            rh.getCells().add(createTableCell(columns[i], name));
+        }
+        table.getHeader().add(rh);
+
+        for (int i = 0; i < lineCount; i++) {
+            Row r = createTableRow(table);
+            for (int j = 0; j < res.getColumnsCount(); j++) {
+                int index = i * res.getColumnsCount() + j;
+                Cell c = null;
+                switch (res.getColumns(j).getJavaType()) {
+                    case DATE -> c = createTableCell(columns[j], res.getCells(index).getDateValue() + "");
+                    case LONG -> c = createTableCell(columns[j], res.getCells(index).getLongValue() + "");
+                    case BIG_DECIMAL -> c = createTableCell(columns[j], res.getCells(index).getBigDecimal() + "");
+                    case STRING -> {
+                        String cc = res.getCells(index).getStringValue();
+                        if (cc.startsWith("<")) {
+                            cc = "\n+++\n" + cc + "\n+++\n";
+                            c = createTableCell(columns[j], cc);
+                        } else c = createTableCell(columns[j], cc + "");
+                    }
+                    case BOOL -> c = createTableCell(columns[j], res.getCells(index).getBoolValue() + "");
+                    case BYTE -> c = createTableCell(columns[j], res.getCells(index).getByteValue() + "");
+                    case SHORT -> c = createTableCell(columns[j], res.getCells(index).getShortValue() + "");
+                    case INT -> c = createTableCell(columns[j], res.getCells(index).getIntValue() + "");
+                    case BYTES -> c = createTableCell(columns[j], res.getCells(index).getBytesValue() + "");
+                    case UNRECOGNIZED -> System.out.println("|UNRECOGNIZED " + columns[j]);
+                }
+                r.getCells().add(c);
+            }
+            table.getBody().add(r);
+        }
+        return table;
+    }
+
+    static TDLTranslator translatorFromTdl(String tdl) {
+        TDLLexer lexer = new TDLLexer(CharStreams.fromString(tdl));
+        System.out.println("AUO lexer " + lexer.getGrammarFileName());
+        TaackANTLRErrorListener errors = new TaackANTLRErrorListener();
+        lexer.removeErrorListener(ConsoleErrorListener.INSTANCE);
+        lexer.addErrorListener(errors);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        System.out.println("AUO tokens " + tokens.getTokens());
+        TDLParser parser = new TDLParser(tokens);
+        parser.removeErrorListener(ConsoleErrorListener.INSTANCE);
+        parser.addErrorListener(errors);
+        System.out.println("AUO parse tokens " + parser.getTokenStream() + "|||" + tokens.getTokens());
+        TDLParser.TdlContext tree = parser.tdl();
+        System.out.println("AUO tree");
+        ParseTreeWalker walker = new ParseTreeWalker();
+        TDLTranslator translator = new TDLTranslator(tdl);
+        walker.walk(translator, tree);
+        System.out.println("AUO walker done");
+        return translator;
+    }
+
 }
