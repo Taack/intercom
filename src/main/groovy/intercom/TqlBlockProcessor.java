@@ -1,5 +1,7 @@
 package intercom;
 
+import diagram.SvgDiagramRender;
+import diagram.scene.BarDiagramScene;
 import groovy.transform.CompileStatic;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -19,10 +21,12 @@ import taack.jdbc.common.tql.gen.TDLParser;
 import taack.jdbc.common.tql.listener.TDLTranslator;
 import taack.jdbc.common.tql.listener.TQLTranslator;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 
-@CompileStatic
 @Name("tql")
 @Contexts({Contexts.LISTING})
 @ContentModel(ContentModel.RAW)
@@ -34,52 +38,14 @@ class TqlBlockProcessor extends BlockProcessor {
         this.taackJdbcService = taackJdbcService;
     }
 
-    @Override
-    public Object process(StructuralNode parent, Reader reader, Map<String, Object> attributes) {
-        String content = reader.read();
-        String[] contentSplit = content.split("--");
-        String tql = contentSplit[0];
-        System.out.println("TQL " + tql);
-        TQLTranslator t;
-        try {
-            t = TaackJdbcService.translatorFromTql(tql);
-        } catch (TaackJdbcError e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
-        }
 
-        if (t.errors.isEmpty()) {
-            TaackResultSetOuterClass.TaackResultSet res = taackJdbcService.protoFromTranslator(t, 20, 0);
-            int lineCount = res.getCellsCount() / res.getColumnsCount();
-            if (contentSplit.length > 1) {
-//            Block outterBlock = createBlock(parent, "div", "");
-                for (int i = 1; i < contentSplit.length; i++) {
-                    String tdl = contentSplit[i].strip();
-                    System.out.println("TDL " + tdl);
-                    TDLTranslator tdlTranslator = translatorFromTdl(tdl);
-                    if (tdlTranslator.kind == TDLTranslator.Kind.TABLE) {
-                        return tdlTable(parent, res, lineCount, tdlTranslator.cols);
-                    } else {
-                        return null;
-                    }
-                }
-            } else {
-                return tdlTable(parent, res, lineCount, null);
-            }
-        } else {
-            System.out.println("Errors " + t.errors);
-            return createBlock(parent, "paragraph", t.errors.toString(), attributes);
-        }
-        return null;
-    }
 
     private Table tdlTable(StructuralNode parent, TaackResultSetOuterClass.TaackResultSet res, int lineCount, SortedMap<String, String> cols) {
         Table table = createTable(parent);
 
         Column[] columns = new Column[res.getColumnsCount()];
         Row rh = createTableRow(table);
-        for(int i = 0; i < res.getColumnsCount(); i++) {
+        for (int i = 0; i < res.getColumnsCount(); i++) {
             columns[i] = createTableColumn(table, i);
             String name = res.getColumns(i).getName();
             if (cols != null && cols.containsKey(name)) {
@@ -117,6 +83,121 @@ class TqlBlockProcessor extends BlockProcessor {
             table.getBody().add(r);
         }
         return table;
+    }
+
+    @Override
+    public Object process(StructuralNode parent, Reader reader, Map<String, Object> attributes) {
+        String content = reader.read();
+        String[] contentSplit = content.split("--");
+        String tql = contentSplit[0];
+        System.out.println("TQL " + tql);
+        TQLTranslator t;
+        try {
+            t = TaackJdbcService.translatorFromTql(tql);
+        } catch (TaackJdbcError e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+
+        if (t.errors.isEmpty()) {
+            TaackResultSetOuterClass.TaackResultSet res = taackJdbcService.protoFromTranslator(t, 20, 0);
+            int lineCount = res.getCellsCount() / res.getColumnsCount();
+            if (contentSplit.length > 1) {
+//            Block outterBlock = createBlock(parent, "div", "");
+                for (int i = 1; i < contentSplit.length; i++) {
+                    String tdl = contentSplit[i].strip();
+                    System.out.println("TDL " + tdl);
+                    TDLTranslator tdlTranslator = translatorFromTdl(tdl);
+                    if (tdlTranslator.kind == TDLTranslator.Kind.TABLE) {
+                        return tdlTable(parent, res, lineCount, tdlTranslator.cols);
+                    } else {
+                        return tdlBarChart(parent, res, lineCount, tdlTranslator.cols);
+                    }
+                }
+            } else {
+                return tdlTable(parent, res, lineCount, null);
+            }
+        } else {
+            System.out.println("Errors " + t.errors);
+            return createBlock(parent, "paragraph", t.errors.toString(), attributes);
+        }
+        return null;
+    }
+
+
+    private Block tdlBarChart(StructuralNode parent, TaackResultSetOuterClass.TaackResultSet res, int lineCount, SortedMap<String, String> cols) {
+        ArrayList<String> xLabelList = new ArrayList<>();
+        Map<String, ArrayList<BigDecimal>> yDataListPerKey = new HashMap<>();
+        for (int i = 0; i < lineCount; i++) {
+            ArrayList<String> xLabel = new ArrayList<>();
+            for (int j = 0; j < res.getColumnsCount(); j++) {
+                String columnHeaderName = res.getColumns(j).getName();
+                if (cols != null && cols.containsKey(columnHeaderName)) {
+                    columnHeaderName = cols.get(columnHeaderName);
+                }
+                int index = i * res.getColumnsCount() + j;
+                switch (res.getColumns(j).getJavaType()) {
+                    // combine non-numeral columns, and use the value as xLabel
+                    case DATE -> xLabel.add(res.getCells(index).getDateValue() + "");
+                    case STRING -> {
+                        String cc = res.getCells(index).getStringValue();
+                        if (cc.startsWith("<")) {
+                            cc = "\n+++\n" + cc + "\n+++\n";
+                        }
+                        xLabel.add(cc);
+                    }
+                    case BOOL -> xLabel.add(res.getCells(index).getBoolValue() + "");
+                    case BYTE -> xLabel.add(res.getCells(index).getByteValue() + "");
+                    case BYTES -> xLabel.add(res.getCells(index).getBytesValue() + "");
+
+                    // use the value of numeral column as yData
+                    case LONG -> {
+                        if (!yDataListPerKey.containsKey(columnHeaderName)) {
+                            yDataListPerKey.put(columnHeaderName, new ArrayList<>());
+                        }
+                        yDataListPerKey.get(columnHeaderName).add(new BigDecimal(res.getCells(index).getLongValue()));
+                    }
+                    case BIG_DECIMAL -> {
+                        if (!yDataListPerKey.containsKey(columnHeaderName)) {
+                            yDataListPerKey.put(columnHeaderName, new ArrayList<>());
+                        }
+                        yDataListPerKey.get(columnHeaderName).add(new BigDecimal(res.getCells(index).getBigDecimal()));
+                    }
+                    case SHORT -> {
+                        if (!yDataListPerKey.containsKey(columnHeaderName)) {
+                            yDataListPerKey.put(columnHeaderName, new ArrayList<>());
+                        }
+                        yDataListPerKey.get(columnHeaderName).add(new BigDecimal(res.getCells(index).getShortValue()));
+                    }
+                    case INT -> {
+                        if (!yDataListPerKey.containsKey(columnHeaderName)) {
+                            yDataListPerKey.put(columnHeaderName, new ArrayList<>());
+                        }
+                        yDataListPerKey.get(columnHeaderName).add(new BigDecimal(res.getCells(index).getIntValue()));
+                    }
+
+                    case UNRECOGNIZED -> System.out.println("|UNRECOGNIZED Column index " + j);
+                }
+            }
+            xLabelList.add(String.join(" ", xLabel));
+        }
+
+        Map<String, Map<Object, BigDecimal>> dataPerKey = new HashMap<>();
+        yDataListPerKey.forEach((key, yDataList) -> {
+            Map<Object, BigDecimal> data = new HashMap<>();
+            for (int i = 0; i < xLabelList.size(); i++) {
+                data.put(xLabelList.get(i), i < yDataList.size() ? yDataList.get(i) : BigDecimal.ZERO);
+            }
+            dataPerKey.put(key, data);
+        });
+
+        // when the third parameter is TRUE, the diagram width will auto-fit to 100% of section width by doing ZOOM. The zoom rate is "sectionWidth / ${firstParameter}"
+        // when the third parameter is FALSE, the diagram width will be fixed to ${firstParameter}
+        SvgDiagramRender render = new SvgDiagramRender(new BigDecimal("600.0"), new BigDecimal("300.0"), true);
+        BarDiagramScene scene = new BarDiagramScene(render, dataPerKey, true);
+        scene.draw();
+        return createBlock(parent, "pass", render.getRendered());
     }
 
     static TDLTranslator translatorFromTdl(String tdl) {
