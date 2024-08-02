@@ -2,6 +2,7 @@ package intercom
 
 import grails.compiler.GrailsCompileStatic
 import grails.gorm.transactions.Transactional
+import grails.util.Triple
 import org.apache.commons.io.FileUtils
 import org.asciidoctor.*
 import org.asciidoctor.ast.Document
@@ -15,12 +16,15 @@ import org.eclipse.jgit.lib.PersonIdent
 import org.eclipse.jgit.revwalk.RevCommit
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import taack.domain.TaackJdbcService
 import taack.ui.TaackUiConfiguration
 
 import javax.annotation.PostConstruct
 
 @GrailsCompileStatic
 class IntercomAsciidoctorConverterService {
+
+    TaackJdbcService taackJdbcService
 
     @Value('${intranet.root}')
     String intranetRoot
@@ -38,6 +42,8 @@ class IntercomAsciidoctorConverterService {
 
     @Value('${exe.vega.bin}')
     String vegaBinPath
+
+    private Random random = new Random()
 
     @PostConstruct
     private void init() {
@@ -106,6 +112,7 @@ class IntercomAsciidoctorConverterService {
                 result.close()
             } catch (e) {
                 log.error "Cannot clone local repo ${gitRootPath + '/' + doc.intercomRepo.name}: ${e.message}"
+                throw e
             }
         } else {
             try {
@@ -131,6 +138,7 @@ class IntercomAsciidoctorConverterService {
                 git.close()
             } catch (e) {
                 log.error "Cannot clone local repo ${gitRootPath + '/' + doc.intercomRepo.name}: ${e.message}"
+                throw e
             }
         }
         processIndexFile(doc, pdfMode)
@@ -174,8 +182,10 @@ class IntercomAsciidoctorConverterService {
             try {
                 asciidoctor = Asciidoctor.Factory.create()
             } catch (Exception e) {
+                e.printStackTrace()
                 println e
             } catch (Throwable t) {
+                t.printStackTrace()
                 println t
             }
         asciidoctor
@@ -190,7 +200,7 @@ class IntercomAsciidoctorConverterService {
         final String htmlFilePath = rp.replace('.adoc', pdfMode ? '.pdf' : '.html')
         final String outputTree = docOutputTree(doc)
         final String contentTree = docContentTree(doc)
-        String stringHtml
+        String bodyHtml
         File html = new File("${outputTree}/${htmlFilePath}")
         Slideshow slideshow = null
         Asciidoctor asciidoctor = initAsciidoctorJ()
@@ -211,10 +221,16 @@ class IntercomAsciidoctorConverterService {
         asciidoctor.registerLogHandler(new LogHandler() { // (1)
             @Override
             void log(LogRecord logRecord) {
-                //println(logRecord.getMessage())
-                logRecord.getMessage()
+                println(logRecord.getMessage())
+                //logRecord.getMessage()
             }
         })
+
+        List<Triple<String, String, Integer>> menus = []
+        asciidoctor.javaExtensionRegistry()
+                .blockMacro(new SlideBlockMacroProcessor(outputTree))
+                .treeprocessor(new MenuTreeprocessor(menus))
+                .block(new TqlBlockProcessor(taackJdbcService))
 
         StringBuffer indexFileTransformed = new StringBuffer()
         boolean contextStartWithGnuplot = false
@@ -257,15 +273,22 @@ class IntercomAsciidoctorConverterService {
         })
 
         OptionsBuilder optionHasToc = Options.builder().option('parse_header_only', true)
-        boolean hasToc = asciidoctor.load(indexFile.text, optionHasToc.build()).hasAttribute('toc')
+        def loadedDoc = asciidoctor.load(indexFile.text, optionHasToc.build())
+        boolean hasToc = loadedDoc.hasAttribute('toc')
+
+        String taackCategory = loadedDoc.attributes['taack-category']
+        Integer height = loadedDoc.attributes['taack-height']?.toString()?.toInteger()
+        Integer id = (loadedDoc.attributes['taack-id']?.toString()?.toInteger() ?: random.nextInt((10**5) as Integer)) as Integer
         AttributesBuilder attributes = Attributes.builder()
                 .backend("${useRevealJS ? 'revealjs' : pdfMode ? 'pdf' : 'html5'}")
                 .title(doc.abstractDesc)
+                .attribute("revealjsdir", "/assets")
                 .attribute('vg2png', vegaBinPath + '/vg2png')
                 .attribute('vg2svg', vegaBinPath + '/vg2svg')
 
         OptionsBuilder options = Options.builder()
                 .safe(SafeMode.UNSAFE)//.inPlace(true)
+                .standalone(false)
                 .baseDir(new File("${contentTree}/${rpd}"))
 
         if (hasToc) {
@@ -274,23 +297,43 @@ class IntercomAsciidoctorConverterService {
         }
 
         if (!pdfMode) {
-
             attributes.attribute("webrootpath", "${outputTree}/${rpd}" as String)
                     .attribute("webimagesdir", "/intercom/media/${doc.id}?rdp=${rpd}" as String)
                     .attribute("datadir", "${contentTree}/${rpd}/data" as String)
                     .attribute("source-highlighter", "rouge")
+                    .tableOfContents(false)
 
             options.attributes(attributes.build())
             Document document = asciidoctor.load(indexFile.text, options.build())
-//        dumpDoc(document)
-            stringHtml = document.convert()
+
+            bodyHtml = document.convert()
             asciidoctor.shutdown()
+            if (useRevealJS) {
+                bodyHtml = decorateSlideshow(bodyHtml, height, id)
+            } else {
+                String menuHtml = buildMenus(loadedDoc.title, menus)
+                println "AUO menus = $menuHtml"
+                bodyHtml = """\
+                    <div id="asciidoctorMenu" class="col-12 col-sm-6 col-md-4 toc toc2 asciidoctor" style="position: sticky; top: 0;float: left;max-height: 100vh;
+    overflow-x: scroll;">
+                            $menuHtml
+                    </div>
 
-            if (hasToc) stringHtml = stringHtml.substring(stringHtml.indexOf("</style>") + 8)
+                    <div id="asciidoctor" taacktag="COL" class="row g-2 asciidoctor">
+                        <div class="col-12">    
+                            <main id="asciidocMain" class="article">
+                            ${bodyHtml}
+                            </main>
+                        </div>
+                    </div>
+                    """.stripIndent()
+        }
 
+            if (html.exists()) html.delete()
             FileUtils.touch(html)
-            stringHtml = convertMediaToWebFormat(doc, stringHtml)
-            html.setText(stringHtml, "UTF-8")
+            bodyHtml = convertMediaToWebFormat(doc, bodyHtml)
+
+            html << bodyHtml
         } else {
             attributes.attribute("pdf-theme", "${taackUiConfiguration.root}/pdf/asciidoctor-pdf-themes/citel.yml" as String)
                     .attribute("pdf-fontsdir", "${taackUiConfiguration.root}/pdf/fonts;GEM_FONTS_DIR" as String)
@@ -323,15 +366,9 @@ class IntercomAsciidoctorConverterService {
     }
 
     final File retrieveIndexFile(final IntercomRepoDoc doc, boolean pdfMode = false) {
-        final useRevealJS = doc.kind == IntercomDocumentKind.SLIDESHOW
-
-        final File indexFile = new File(docPath(doc))
-        final String rpd = docRelativeDirPath(doc)
         final String rp = docRelativeFilePath(doc)
         final String htmlFilePath = rp.replace('.adoc', pdfMode ? '.pdf' : '.html')
         final String outputTree = docOutputTree(doc)
-        final String contentTree = docContentTree(doc)
-        String stringHtml
         new File("${outputTree}/${htmlFilePath}")
     }
 
@@ -339,11 +376,6 @@ class IntercomAsciidoctorConverterService {
         final String rpd = docRelativeDirPath(doc)
         final String outputTree = docOutputTree(doc)
         final String inputTree = docContentTree(doc)
-
-        println "AUO rpd = $rpd"
-        println "AUO outputTree = $outputTree"
-        println "AUO inputTree = $inputTree"
-        println "htmlContent = $htmlContent"
 
         (htmlContent =~ /(?ms)( src="\/intercom\/media\/${doc.id}\?rdp=)${rpd}([a-z0-9\-\/]*)\.(png|jpeg|jpg)"/).findAll().each {
             final m = it as ArrayList<String>
@@ -368,10 +400,6 @@ class IntercomAsciidoctorConverterService {
             final fileNameSuffix = m[3]
             final fileNamePrefix = pathPrefix.split('/').last()
             final inputImgPath = new File("$inputTree/${rpd}/${pathPrefix}.${fileNameSuffix}").exists() ? "$inputTree/${rpd}/${pathPrefix}.${fileNameSuffix}" : "$outputTree/${pathPrefix}.${fileNameSuffix}"
-            println "AUO $inputImgPath"
-            println "AUO $fileNamePrefix"
-            println "AUO $fileNameSuffix"
-            println "AUO $toChange"
             Process copy = Runtime.getRuntime().exec(["/usr/bin/cp", inputImgPath, "$outputTree/${fileNamePrefix}.${fileNameSuffix}"] as String[])
             final processError = copy.errorStream.text
             int retCode = copy.waitFor()
@@ -387,10 +415,6 @@ class IntercomAsciidoctorConverterService {
             final fileNameSuffix = m[3]
             final fileNamePrefix = pathPrefix.split('/').last()
             final inputImgPath = new File("$inputTree/${rpd}/${pathPrefix}.${fileNameSuffix}").exists() ? "$inputTree/${rpd}/${pathPrefix}.${fileNameSuffix}" : "$outputTree/${pathPrefix}.${fileNameSuffix}"
-            println "AUO $inputImgPath"
-            println "AUO $fileNamePrefix"
-            println "AUO $fileNameSuffix"
-            println "AUO $toChange"
             Process copy = Runtime.getRuntime().exec(["/usr/bin/cp", inputImgPath, "$outputTree/${fileNamePrefix}.${fileNameSuffix}"] as String[])
             final processError = copy.errorStream.text
             int retCode = copy.waitFor()
@@ -423,5 +447,66 @@ class IntercomAsciidoctorConverterService {
         doc.docTitle = document.doctitle
         doc.authors = document.getAuthors().join(', ')
         doc.subtitle = document.structuredDoctitle.subtitle
+    }
+
+    private static String decorateSlideshow(String slideshowContent, Integer height, int id = 1) {
+        return """
+<style src="/assets/custom-reveal.css"></style>
+            <div style="height: ${height ?: 512}px;">
+                <div class="reveal deck${id ?: 1}">
+                    <div class="slides">
+                        ${slideshowContent}
+                    </div>
+                </div>
+            </div>
+<script postExecute="true">
+    // More info about initialization & config:
+    // - https://revealjs.com/initialization/
+    // - https://revealjs.com/config/
+    if (typeof Reveal != 'undefined' && document.querySelector( '.deck${id ?: 1}' ) && document.querySelectorAll(".deck${id ?: 1} canvas").length < 1) {
+        let deck${id ?: 1} = Reveal(document.querySelector( '.deck${id ?: 1}' ), {
+            embedded: true,
+            keyboardCondition: 'focused' // only react to keys when focused
+        })
+        deck${id ?: 1}.initialize({
+            hash: false,
+            fragments: true,
+            fragmentInURL: false,
+            loop: true,
+            transition: 'default',
+            transitionSpeed: 'default',
+            backgroundTransition: 'default',
+            viewDistance: 3,
+            width: 960,
+            height: ${height ?: 512},
+            controls: true,
+            progress: true,
+            autoSlide: 4000,
+            plugins: [RevealHighlight]
+        });
+    }
+</script>
+        """
+    }
+
+    String buildMenus(String title, List<Triple<String, String, Integer>> menus) {
+        StringBuffer nav = new StringBuffer(1024)
+        nav.append("""<div id="toctitle">${title}</div>""")
+        int lastLevel = 0
+        nav.append('<ul class="sectlevel1">\n')
+        for (Triple<String, String, Integer> m in menus) {
+            if (lastLevel < m.cValue) {
+                nav.append("<ul class=\"sectlevel${m.cValue+1}\">")
+            } else if (lastLevel > m.cValue) {
+                nav.append('</ul>')
+            }
+            nav.append("""\
+                <li>
+                    <a href="#${m.bValue}">${m.aValue}</a>
+                </li>
+            """.stripIndent())
+            lastLevel = m.cValue
+        }
+        nav.append('</ul>')
     }
 }

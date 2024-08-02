@@ -10,6 +10,7 @@ import grails.web.api.WebAttributes
 import org.codehaus.groovy.runtime.MethodClosure as MC
 import org.springframework.beans.factory.annotation.Autowired
 import crew.User
+import taack.domain.TaackFilter
 import taack.domain.TaackFilterService
 import taack.render.TaackUiEnablerService
 import taack.ui.dsl.UiFilterSpecifier
@@ -36,6 +37,11 @@ class IntercomUiService implements WebAttributes {
         crewSecurityService.canEdit(User.read(id))
     }
 
+    private noPdfForSlideshow(Long id, Map p) {
+        if (!id) return true
+        IntercomRepoDoc.read(id).kind != IntercomDocumentKind.SLIDESHOW
+    }
+
     @PostConstruct
     void init() {
         TaackUiEnablerService.securityClosure(
@@ -43,6 +49,9 @@ class IntercomUiService implements WebAttributes {
                 IntercomController.&createIntercomUser as MC,
                 IntercomController.&saveIntercomUser as MC,
                 CrewController.&saveUser as MC)
+        TaackUiEnablerService.securityClosure(
+                this.&noPdfForSlideshow,
+                IntercomController.&downloadBinDoc as MC)
     }
 
     Pair<UiFilterSpecifier, UiTableSpecifier> buildIntercomUserList(boolean selectMode = false) {
@@ -90,11 +99,11 @@ class IntercomUiService implements WebAttributes {
                     if (selectMode) {
                         rowAction ActionIcon.SELECT * IconStyle.SCALE_DOWN, IntercomController.&selectO2MIntercomRepoUserCloseModal as MC, cui.id
                     } else {
-                        if (crewSecurityService.canEdit(cui.baseUser))
-                            rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editIntercomUser as MC, cui.id
+                        rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editIntercomUser as MC, cui.id
+                        rowAction ActionIcon.DELETE * IconStyle.SCALE_DOWN, IntercomController.&deleteIntercomUser as MC, cui.id
                     }
-                    rowField cui.baseUser.toString()
-                    rowField cui.baseUser.subsidiary.toString()
+                    rowField cui.baseUser_
+                    rowField cui.baseUser.subsidiary_
                 }
                 rowField cui.pubKeyContent
             }
@@ -122,9 +131,12 @@ class IntercomUiService implements WebAttributes {
                 label "URL"
                 label tr("default.actions.label")
             }
-            iterate(taackFilterService.getBuilder(IntercomRepo).build()) { IntercomRepo repo ->
+            iterate(taackFilterService.getBuilder(IntercomRepo)
+                    .setSortOrder(TaackFilter.Order.DESC, ir.dateCreated_)
+                    .setMaxNumberOfLine(10)
+                    .build()) { IntercomRepo repo ->
                 rowField repo.dateCreated_
-                rowField repo.owner.baseUser.username
+                rowField repo.owner.baseUser_
                 rowField repo.name
                 String names = ""
                 boolean isFirst = true
@@ -185,7 +197,10 @@ class IntercomUiService implements WebAttributes {
                 }
                 label tr("default.actions.label")
             }
-            iterate(taackFilterService.getBuilder(IntercomRepoDoc).build()) { IntercomRepoDoc doc ->
+            iterate(taackFilterService.getBuilder(IntercomRepoDoc)
+                    .setSortOrder(TaackFilter.Order.DESC, id.dateCreated_)
+                    .setMaxNumberOfLine(10)
+                    .build()) { IntercomRepoDoc doc ->
                 rowColumn {
                     rowField doc.dateCreated_
                     rowField doc.intercomRepo.owner.baseUser.username
@@ -202,15 +217,11 @@ class IntercomUiService implements WebAttributes {
                 rowColumn {
                     if (doc.lastRevAuthor) {
                         rowAction ActionIcon.SHOW * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id
-
-                        if (doc.kind == IntercomDocumentKind.PAGE)
-                            rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&dlDoc as MC, doc.id
-                        else if (doc.kind == IntercomDocumentKind.SLIDESHOW)
-                            rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id, ["print-pdf": true]
+                        rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&downloadBinDoc as MC, doc.id
                     }
                     rowAction ActionIcon.DETAILS * IconStyle.SCALE_DOWN, IntercomController.&histDoc as MC, doc.id
                     rowAction ActionIcon.EDIT * IconStyle.SCALE_DOWN, IntercomController.&editDoc as MC, doc.id
-                    rowAction ActionIcon.REFRESH  * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
+                    rowAction ActionIcon.REFRESH * IconStyle.SCALE_DOWN, IntercomController.&refreshDoc as MC, doc.id
                 }
             }
         }
@@ -224,6 +235,21 @@ class IntercomUiService implements WebAttributes {
         } else {
             g.render(template: "/intercom/asciidocInline", model: [pageAsciidocContent: prez.text]) as String
         }
+    }
+
+    String renderReveal(IntercomRepoDoc doc) {
+        def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
+        g.render(
+                view: "asciidocReveal5",
+                model: [
+                        pageAsciidocContent: prez.text,
+                        theme              : doc.theme,
+                ])
+    }
+
+    String renderAsciidoc(IntercomRepoDoc doc) {
+        def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
+        g.render(template: "/intercom/asciidocInline", model: [pageAsciidocContent: prez.text])
     }
 
     Closure<BlockSpec> buildBlockAsciidocModal(IAsciidocAnchorRef ref) {

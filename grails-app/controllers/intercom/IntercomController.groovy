@@ -1,29 +1,24 @@
 package intercom
 
 import attachment.DocumentCategory
-import crew.config.SupportedLanguage
+import crew.AttachmentController
 import crew.CrewUiService
+import crew.User
+import crew.config.SupportedLanguage
 import grails.compiler.GrailsCompileStatic
 import grails.gorm.transactions.Transactional
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.plugin.springsecurity.annotation.Secured
 import org.codehaus.groovy.runtime.MethodClosure as MC
-import crew.User
 import taack.domain.TaackSaveService
 import taack.render.TaackUiProgressBarService
 import taack.render.TaackUiService
-import taack.ui.dsl.UiBlockSpecifier
-import taack.ui.dsl.UiFormSpecifier
-import taack.ui.dsl.UiMenuSpecifier
-import taack.ui.dsl.UiShowSpecifier
-import taack.ui.dsl.UiTableSpecifier
+import taack.ui.dsl.*
 import taack.ui.dsl.block.BlockSpec
 import taack.ui.dsl.common.ActionIcon
 import taack.ui.dump.markdown.Markdown
 
 import static grails.async.Promises.task
-import static taack.render.TaackUiService.tr
-
 /**
  * Independent App Managing Documentation via Git
  * Functionalities:
@@ -43,8 +38,7 @@ import static taack.render.TaackUiService.tr
  *  - Multiple doc per repo
  *  - Heading: UserGuides, HowTos, News and Noteworthy
  *
- *  Alternative to tree: tags, history, research
- */
+ *  Alternative to tree: tags, history, research*/
 @GrailsCompileStatic
 @Secured(["isAuthenticated()"])
 class IntercomController {
@@ -56,24 +50,6 @@ class IntercomController {
     TaackUiProgressBarService taackUiProgressBarService
     IntercomSearchService intercomSearchService
 
-    protected boolean isDirector() {
-        final User u = authenticatedUser as User
-        return u.authorities*.authority.contains('ROLE_INTERCOM_DIRECTOR')
-    }
-
-    protected boolean isManager() {
-        final User u = authenticatedUser as User
-        return u.authorities*.authority.contains('ROLE_INTERCOM_MANAGER')
-    }
-
-    protected boolean isUser() {
-        final User u = authenticatedUser as User
-        return u.authorities*.authority.contains('ROLE_INTERCOM_USER')
-    }
-
-    protected boolean isAdmin() {
-        return (authenticatedUser as User).authorities*.authority.contains('ROLE_ADMIN')
-    }
 
     protected IntercomUser currentIntercomUser() {
         final User u = authenticatedUser as User
@@ -84,13 +60,13 @@ class IntercomController {
         def intercomUser = currentIntercomUser()
         UiMenuSpecifier m = new UiMenuSpecifier()
         m.ui {
+            menu this.&index as MC
             menu this.&showLatestDocs as MC
             menu this.&showDocs as MC
-            
+
             if (!intercomUser) {
                 menuIcon ActionIcon.CREATE, this.&createIntercomUser as MC
             } else {
-                menu this.&index as MC
                 menu this.&repoDocs as MC
                 menu this.&repos as MC
                 menu this.&intercomUsers as MC
@@ -132,7 +108,8 @@ class IntercomController {
         new UiFormSpecifier().ui doc, {
             hiddenField(doc.intercomRepo_)
             section 'Doc', {
-                field doc.documentCategory_
+                ajaxField doc.documentAccess_, AttachmentController.&selectDocumentAccess as MC
+                ajaxField doc.documentCategory_, AttachmentController.&selectDocumentCategory as MC
                 field doc.kind_
                 field doc.abstractDesc_
                 field doc.baseFilePath_
@@ -142,20 +119,15 @@ class IntercomController {
         }
     }
 
-    def viewDoc(IntercomRepoDoc doc, String vers) {
+    def viewDoc(IntercomRepoDoc doc) {
+        if (!doc) return false
         if (doc.kind == IntercomDocumentKind.SLIDESHOW) {
-            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-            render(
-                    view: "asciidocReveal${vers ?: '5'}",
-                    model: [
-                            pageAsciidocContent: prez.text,
-                            theme              : doc.theme,
-                            menu               : taackUiService.visitMenu(buildMenu())
-                    ])
+            taackUiService.show(new UiBlockSpecifier().ui {
+                String r = intercomUiService.renderReveal(doc)
+                custom(r)
+            }, buildMenu())
         } else {
-            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-            render(view: "asciidoc", model: [pageAsciidocContent: prez.text,
-                                             menu               : taackUiService.visitMenu(buildMenu())])
+            taackUiService.show(intercomUiService.renderAsciidoc(doc), buildMenu())
         }
     }
 
@@ -173,17 +145,16 @@ class IntercomController {
         def listOfRev = intercomAsciidoctorConverterService.docHistory(doc)
         taackUiService.show(new UiBlockSpecifier().ui {
             modal {
-                new UiTableSpecifier().ui({
-                    for (String rev in listOfRev)
-                        row {
-                            rowField rev
-                        }
+                table new UiTableSpecifier().ui({
+                    for (String rev in listOfRev) row {
+                        rowField rev
+                    }
                 })
             }
         })
     }
 
-    def dlDoc(IntercomRepoDoc doc) {
+    def downloadBinDoc(IntercomRepoDoc doc) {
         def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc, true)
         response.setContentType("application/pdf")
         response.setHeader("Content-disposition", "attachment;filename=\"${prez.name}\"")
@@ -201,16 +172,24 @@ class IntercomController {
         }, 100)
         task {
             try {
-                def prez = intercomAsciidoctorConverterService.processDoc(doc)
-                intercomAsciidoctorConverterService.refreshDocMetaData(doc)
-                taackUiProgressBarService.progress(pId, 50)
-                if (doc.kind == IntercomDocumentKind.SLIDESHOW) intercomAsciidoctorConverterService.processDoc(doc, true)
-                taackUiProgressBarService.progress(pId, 50)
+                User.withNewSession {
+                    def prez = intercomAsciidoctorConverterService.processDoc(doc)
+                    intercomAsciidoctorConverterService.refreshDocMetaData(doc)
+                    taackUiProgressBarService.progress(pId, 50)
+                    if (doc.kind == IntercomDocumentKind.PAGE)
+                        intercomAsciidoctorConverterService.processDoc(doc, true)
+                    taackUiProgressBarService.progress(pId, 50)
+                }
             } catch (e) {
                 log.error(e.message)
-            } finally {
-                taackUiProgressBarService.progressEnded(pId)
+                e.printStackTrace()
+                taackUiProgressBarService.progressEndedClosure(pId, BlockSpec.buildBlockSpec({
+                    show(new UiShowSpecifier().ui {
+                        inlineHtml("Error: ${e.message}")
+                    })
+                }))
             }
+            taackUiProgressBarService.progressEnded(pId)
         }
     }
 
@@ -248,8 +227,10 @@ class IntercomController {
     def selectO2MIntercomRepoUser() {
         def p = intercomUiService.buildIntercomUserList(true)
         taackUiService.show(new UiBlockSpecifier().ui {
-            tableFilter p.aValue, p.bValue
-        }, buildMenu())
+            modal {
+                tableFilter p.aValue, p.bValue
+            }
+        })
     }
 
     def selectO2MIntercomRepoUserCloseModal(IntercomUser user) {
@@ -365,18 +346,19 @@ class IntercomController {
     }
 
     def showLatestDocs() {
-        List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByLastRevWhenIsNotNull([max: 10, sort: "lastRevWhen", order: "desc"])
         taackUiService.show(new UiBlockSpecifier().ui {
-            table new UiTableSpecifier().ui( {
-                for (IntercomRepoDoc doc in docList) {
+            table new UiTableSpecifier().ui({
+                for (IntercomRepoDoc doc in IntercomRepoDoc.findAll([max: 10, sort: "lastRevWhen", order: "desc"])) {
+                    println "DOC $doc"
+
                     row {
                         rowField """
-                            <b>${doc.docTitle ?: 'no title set ...'}</b><br>
+                            <b>${doc.docTitle ?: doc.baseFilePath}</b><br>
                             ${doc.lastRevWhen} <b>${doc.lastRevAuthor}</b><br>
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
                         rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
-                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&dlDoc as MC, doc.id
+                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&downloadBinDoc as MC, doc.id
                         rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
                     }
                 }
@@ -387,18 +369,18 @@ class IntercomController {
     def showDocs(String documentCategory) {
         DocumentCategory docCat = documentCategory as DocumentCategory
 
-        List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByDocumentCategoryAndLastRevAuthorIsNotNull(docCat, [max: 10, sort: "lastRevWhen", order: "desc"])
         taackUiService.show(new UiBlockSpecifier().ui {
             table new UiTableSpecifier().ui({
-                for (IntercomRepoDoc doc in docList) {
+                for (IntercomRepoDoc doc in IntercomRepoDoc.findAllByDocumentCategoryAndLastRevAuthorIsNotNull(docCat, [max: 10, sort: "lastRevWhen", order: "desc"])) {
+                    println "DOC $doc"
                     row {
                         rowField """
-                            <b>${doc.docTitle ?: 'no title set ...'}</b><br>
+                            <b>${doc.docTitle ?: doc.baseFilePath}</b><br>
                             ${doc.lastRevWhen} <b>${doc.lastRevAuthor}</b><br>
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
                         rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
-                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&dlDoc as MC, doc.id
+                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&downloadBinDoc as MC, doc.id
                         rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
                     }
                 }
@@ -439,6 +421,13 @@ class IntercomController {
     }
 
     @Transactional
+    @Secured(['ROLE_ADMIN'])
+    def deleteIntercomUser(IntercomUser intercomUser) {
+        intercomUser.delete()
+        taackUiService.ajaxReload()
+    }
+
+    @Transactional
     @Secured(['ROLE_ADMIN', 'ROLE_INTERCOM_DIRECTOR', 'ROLE_INTERCOM_MANAGER'])
     def saveIntercomRepo() {
         taackSaveService.saveThenRedirectOrRenderErrors(IntercomRepo, this.&repos as MC)
@@ -461,8 +450,7 @@ class IntercomController {
     @Secured(["ROLE_ADMIN"])
     def refreshAllDocs() {
         List<IntercomRepoDoc> docList = IntercomRepoDoc.findAllByLastRevWhenIsNotNull([max: 10, sort: "lastRevWhen", order: "desc"])
-        for (def doc in docList)
-            intercomAsciidoctorConverterService.refreshDocMetaData(doc)
+        for (def doc in docList) intercomAsciidoctorConverterService.refreshDocMetaData(doc)
 
         render "OK"
     }
