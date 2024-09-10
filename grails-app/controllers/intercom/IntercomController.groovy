@@ -16,6 +16,7 @@ import taack.render.TaackUiService
 import taack.ui.dsl.*
 import taack.ui.dsl.block.BlockSpec
 import taack.ui.dsl.common.ActionIcon
+import taack.ui.dsl.common.IconStyle
 import taack.ui.dump.markdown.Markdown
 
 import static grails.async.Promises.task
@@ -357,9 +358,9 @@ class IntercomController {
                             ${doc.lastRevWhen} <b>${doc.lastRevAuthor}</b><br>
                             ${doc.lastRevMessage} ${doc.abstractDesc}<br>
                         """
-                        rowAction ActionIcon.SHOW, IntercomController.&viewDoc as MC, doc.id
-                        rowAction ActionIcon.EXPORT_PDF, IntercomController.&downloadBinDoc as MC, doc.id
-                        rowAction ActionIcon.DETAILS, IntercomController.&histDoc as MC, doc.id
+                        rowAction ActionIcon.SHOW * IconStyle.SCALE_DOWN, IntercomController.&viewDoc as MC, doc.id
+                        rowAction ActionIcon.EXPORT_PDF * IconStyle.SCALE_DOWN, IntercomController.&downloadBinDoc as MC, doc.id
+                        rowAction ActionIcon.DETAILS * IconStyle.SCALE_DOWN, IntercomController.&histDoc as MC, doc.id
                     }
                 }
             })
