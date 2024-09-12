@@ -85,7 +85,7 @@ class IntercomUiService implements WebAttributes {
                 }
                 label tr("intercomUser.pubKeyContent.label")
             }
-            iterate(taackFilterService.getBuilder(IntercomUser).setMaxNumberOfLine(15).build()) { IntercomUser cui ->
+            iterate(taackFilterService.getBuilder(IntercomUser).build()) { IntercomUser cui ->
 
                 rowColumn {
                     rowField cui.dateCreated_
