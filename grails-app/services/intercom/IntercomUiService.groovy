@@ -249,7 +249,7 @@ class IntercomUiService implements WebAttributes {
 
     String renderAsciidoc(IntercomRepoDoc doc) {
         def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-        g.render(template: "/intercom/asciidocInline", model: [pageAsciidocContent: prez.text])
+        g.render(view: "/intercom/asciidocInline", model: [pageAsciidocContent: prez.text])
     }
 
     Closure<BlockSpec> buildBlockAsciidocModal(IAsciidocAnchorRef ref) {

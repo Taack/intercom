@@ -128,13 +128,14 @@ class IntercomController {
                 custom(r)
             }, buildMenu())
         } else {
-            taackUiService.show(intercomUiService.renderAsciidoc(doc), buildMenu())
+            def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
+            taackUiService.showView('/intercom/asciidocInline', [pageAsciidocContent: prez.text], buildMenu())
         }
     }
 
     def viewDocInline(IntercomRepoDoc doc) {
         def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-        render(template: "asciidocInline", model: [pageAsciidocContent: prez.text])
+        render(view: 'asciidocInline.gsp', model: [pageAsciidocContent: prez.text])
     }
 
     def viewDocModal(String docPath) {

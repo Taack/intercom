@@ -1,34 +1,32 @@
-<%--
-  Created by IntelliJ IDEA.
-  User: auo
-  Date: 27/11/2021
-  Time: 05:55
---%>
-
-<%@ page contentType="text/html;charset=UTF-8" %>
-<asset:stylesheet src="intercom.css"/>
-<asset:javascript src="custom-reveal.js"/>
-<script type="text/x-mathjax-config">
+<!doctype html>
+<html>
+<head>
+    <meta name="layout" content="taack" />
+    <asset:stylesheet src="intercom.css"/>
+    <asset:javascript src="custom-reveal.js"/>
+    <script type="text/x-mathjax-config">
     MathJax.Hub.Config({
        asciimath2jax: {
            delimiters: [['\\$','\\$'], ['`','`']]
        }
     });
 </script>
-<script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
-</script>
+    <script type="text/javascript" async
+            src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
 
-<style>
-#asciidoctor {
-    letter-spacing: normal;
-}
-</style>
-
-%{--<main id="asciidocMain" class="article">--}%
+    <style>
+    #asciidoctor {
+        letter-spacing: normal;
+    }
+    </style>
+</head>
+<body>
+<main id="asciidocMain" class="article">
 %{--    <div id="asciidoctor" class="asciidoctor">--}%
-        ${raw(pageAsciidocContent)}
+${raw(pageAsciidocContent)}
 %{--    </div>--}%
-%{--</main>--}%
+</main>
 
 <script postExecute="true">
     function manageAsciidoc() {
@@ -109,5 +107,8 @@
             }
         }
     }
+
     manageAsciidoc()
 </script>
+</body>
+</html>

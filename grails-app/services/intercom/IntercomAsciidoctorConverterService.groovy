@@ -292,8 +292,8 @@ class IntercomAsciidoctorConverterService {
                 .baseDir(new File("${contentTree}/${rpd}"))
 
         if (hasToc) {
-            attributes.tableOfContents2(Placement.LEFT)
-            options.headerFooter(true)
+//            attributes.tableOfContents2(Placement.LEFT)
+//            options.headerFooter(true)
         }
 
         if (!pdfMode) {
@@ -311,10 +311,10 @@ class IntercomAsciidoctorConverterService {
             if (useRevealJS) {
                 bodyHtml = decorateSlideshow(bodyHtml, height, id)
             } else {
+                // TODO if declared toc, do not display menu...
                 String menuHtml = buildMenus(loadedDoc.title, menus)
-                println "AUO menus = $menuHtml"
                 bodyHtml = """\
-                    <div id="asciidoctorMenu" class="col-12 col-sm-6 col-md-4 toc toc2 asciidoctor" style="position: sticky; top: 0;float: left;max-height: 100vh;
+                    <div id="toc" class="col-sm-6 col-md-4 toc toc2 asciidoctor" style="position: sticky; top: 0;float: left;max-height: 100vh;
     overflow-x: scroll;">
                             $menuHtml
                     </div>
