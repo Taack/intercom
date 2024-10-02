@@ -351,8 +351,6 @@ class IntercomController {
         taackUiService.show(new UiBlockSpecifier().ui {
             table new UiTableSpecifier().ui({
                 for (IntercomRepoDoc doc in IntercomRepoDoc.findAll([max: 10, sort: "lastRevWhen", order: "desc"])) {
-                    println "DOC $doc"
-
                     row {
                         rowField """
                             <b>${doc.docTitle ?: doc.baseFilePath}</b><br>
@@ -374,7 +372,6 @@ class IntercomController {
         taackUiService.show(new UiBlockSpecifier().ui {
             table new UiTableSpecifier().ui({
                 for (IntercomRepoDoc doc in IntercomRepoDoc.findAllByDocumentCategoryAndLastRevAuthorIsNotNull(docCat, [max: 10, sort: "lastRevWhen", order: "desc"])) {
-                    println "DOC $doc"
                     row {
                         rowField """
                             <b>${doc.docTitle ?: doc.baseFilePath}</b><br>
