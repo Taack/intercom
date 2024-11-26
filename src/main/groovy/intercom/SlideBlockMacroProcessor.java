@@ -5,7 +5,6 @@ import org.asciidoctor.ast.StructuralNode;
 import org.asciidoctor.extension.BlockMacroProcessor;
 import org.asciidoctor.extension.Name;
 
-import javax.management.BadAttributeValueExpException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -20,12 +19,11 @@ public class SlideBlockMacroProcessor extends BlockMacroProcessor {
     }
 
     @Override
-    public Object process(StructuralNode parent, String s, Map<String, Object> map) {
-
+    public StructuralNode process(StructuralNode parent, String s, Map<String, Object> map) {
         String fn = map.get("fn") != null ? map.get("fn").toString() + ".html" : null;
         fn = outputPath + "/" + fn;
 
-        if (fn != null && new File(fn).exists()) {
+        if (new File(fn).exists()) {
             String content;
             try (FileInputStream fileInputStream = new FileInputStream(fn)) {
                 content = new String(fileInputStream.readAllBytes());
@@ -38,4 +36,5 @@ public class SlideBlockMacroProcessor extends BlockMacroProcessor {
         }
         return null;
     }
+
 }

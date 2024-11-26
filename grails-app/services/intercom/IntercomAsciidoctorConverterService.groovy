@@ -8,6 +8,7 @@ import org.asciidoctor.*
 import org.asciidoctor.ast.Document
 import org.asciidoctor.extension.Preprocessor
 import org.asciidoctor.extension.PreprocessorReader
+import org.asciidoctor.extension.Reader
 import org.asciidoctor.log.LogHandler
 import org.asciidoctor.log.LogRecord
 import org.eclipse.jgit.api.Git
@@ -75,20 +76,6 @@ class IntercomAsciidoctorConverterService {
                 autoSlide = revealJsOptionMap["autoSlide"] ? Integer.parseInt(revealJsOptionMap["autoSlide"]) : 3000
                 controls = revealJsOptionMap["controls"] ? Boolean.parseBoolean(revealJsOptionMap["controls"]) : true
                 progress = revealJsOptionMap["progress"] ? Boolean.parseBoolean(revealJsOptionMap["progress"]) : true
-            }
-
-            String toJson() {
-                StringBuffer out = new StringBuffer()
-                if (parallaxBackgroundImage) out.append("parallaxBackgroundImage: '/img/${parallaxBackgroundImage}',\n")
-                if (parallaxBackgroundSize) out.append("parallaxBackgroundSize: '${parallaxBackgroundSize}',\n")
-                if (parallaxBackgroundHorizontal) out.append("parallaxBackgroundHorizontal: ${parallaxBackgroundHorizontal},\n")
-                if (parallaxBackgroundVertical) out.append("parallaxBackgroundVertical: ${parallaxBackgroundVertical},\n")
-                if (width) out.append("width: ${width},\n")
-                if (height) out.append("height: ${height * 3 / 2},\n")
-                if (controls != null) out.append("controls: ${controls},\n")
-                if (progress != null) out.append("progress: ${progress},\n")
-                if (autoSlide != null) out.append("autoSlide: ${autoSlide},\n")
-                out.toString()
             }
         }
 
@@ -252,7 +239,7 @@ class IntercomAsciidoctorConverterService {
 
         asciidoctor.javaExtensionRegistry().preprocessor(new Preprocessor() {
             @Override
-            void process(Document document, PreprocessorReader reader) {
+            Reader process(Document document, PreprocessorReader reader) {
                 StringBuffer content = new StringBuffer()
                 reader.read().readLines().each {
                     if (it.startsWith("[gnuplot")) {
@@ -268,7 +255,7 @@ class IntercomAsciidoctorConverterService {
                     appendCd = false
                 }
 
-                reader.pushInclude(content.toString(), reader.file, reader.file, 1, document.attributes)
+                return reader.pushInclude(content.toString(), reader.file, reader.file, 1, document.attributes)
             }
         })
 
@@ -276,7 +263,6 @@ class IntercomAsciidoctorConverterService {
         def loadedDoc = asciidoctor.load(indexFile.text, optionHasToc.build())
         boolean hasToc = loadedDoc.hasAttribute('toc')
 
-        String taackCategory = loadedDoc.attributes['taack-category']
         Integer height = loadedDoc.attributes['taack-height']?.toString()?.toInteger()
         Integer id = (loadedDoc.attributes['taack-id']?.toString()?.toInteger() ?: random.nextInt((10**5) as Integer)) as Integer
         AttributesBuilder attributes = Attributes.builder()
