@@ -17,7 +17,7 @@ import taack.ui.dsl.*
 import taack.ui.dsl.block.BlockSpec
 import taack.ui.dsl.common.ActionIcon
 import taack.ui.dsl.common.IconStyle
-import taack.ui.dump.markdown.Markdown
+import taack.wysiwyg.Markdown
 
 import static grails.async.Promises.task
 /**
