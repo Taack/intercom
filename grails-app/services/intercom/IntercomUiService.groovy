@@ -7,6 +7,7 @@ import grails.compiler.GrailsCompileStatic
 import grails.gsp.PageRenderer
 import grails.util.Pair
 import grails.web.api.WebAttributes
+import jakarta.annotation.PostConstruct
 import org.codehaus.groovy.runtime.MethodClosure as MC
 import org.springframework.beans.factory.annotation.Autowired
 import crew.User
@@ -18,8 +19,6 @@ import taack.ui.dsl.UiTableSpecifier
 import taack.ui.dsl.block.BlockSpec
 import taack.ui.dsl.common.ActionIcon
 import taack.ui.dsl.common.IconStyle
-
-import javax.annotation.PostConstruct
 
 import static taack.render.TaackUiService.tr
 

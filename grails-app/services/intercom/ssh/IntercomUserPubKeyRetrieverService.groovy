@@ -2,12 +2,12 @@ package intercom.ssh
 
 import grails.compiler.GrailsCompileStatic
 import intercom.IntercomUser
+import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
 import org.springframework.beans.factory.annotation.Value
 import taack.ssh.SshEventRegistry
 import crew.User
 
-import javax.annotation.PostConstruct
-import javax.annotation.PreDestroy
 
 @GrailsCompileStatic
 final class IntercomUserPubKeyRetrieverService implements SshEventRegistry.UserPubKeyRetriever {

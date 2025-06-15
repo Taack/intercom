@@ -3,12 +3,12 @@ package intercom.ssh.git
 import grails.compiler.GrailsCompileStatic
 import intercom.IntercomRepo
 import intercom.IntercomUser
-import org.apache.commons.io.FileUtils
+import jakarta.annotation.PostConstruct
+import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.springframework.beans.factory.annotation.Value
 import taack.ssh.SshEventRegistry
 import crew.User
 
-import javax.annotation.PostConstruct
 
 @GrailsCompileStatic
 class IntercomGitRepoRegisterService implements SshEventRegistry.UserGitRepoChecker {

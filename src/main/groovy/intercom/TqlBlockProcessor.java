@@ -1,7 +1,5 @@
 package intercom;
 
-import diagram.SvgDiagramRender;
-import diagram.scene.BarDiagramScene;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ConsoleErrorListener;
@@ -19,6 +17,8 @@ import taack.jdbc.common.tql.gen.TDLLexer;
 import taack.jdbc.common.tql.gen.TDLParser;
 import taack.jdbc.common.tql.listener.TDLTranslator;
 import taack.jdbc.common.tql.listener.TQLTranslator;
+import taack.ui.dump.diagram.SvgDiagramRender;
+import taack.ui.dump.diagram.scene.BarDiagramScene;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;

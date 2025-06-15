@@ -3,7 +3,8 @@ package intercom
 import grails.compiler.GrailsCompileStatic
 import grails.gorm.transactions.Transactional
 import grails.util.Triple
-import org.apache.commons.io.FileUtils
+import jakarta.annotation.PostConstruct
+import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.asciidoctor.*
 import org.asciidoctor.ast.Document
 import org.asciidoctor.extension.Preprocessor
@@ -20,7 +21,6 @@ import org.springframework.beans.factory.annotation.Value
 import taack.domain.TaackJdbcService
 import taack.ui.TaackUiConfiguration
 
-import javax.annotation.PostConstruct
 
 @GrailsCompileStatic
 class IntercomAsciidoctorConverterService {
@@ -316,7 +316,7 @@ class IntercomAsciidoctorConverterService {
         }
 
             if (html.exists()) html.delete()
-            FileUtils.touch(html)
+            html.createNewFile()
             bodyHtml = convertMediaToWebFormat(doc, bodyHtml)
 
             html << bodyHtml

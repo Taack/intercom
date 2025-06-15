@@ -2,7 +2,8 @@ package intercom
 
 
 import grails.compiler.GrailsCompileStatic
-import org.apache.commons.io.FileUtils
+import jakarta.annotation.PostConstruct
+import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.codehaus.groovy.runtime.MethodClosure
 import org.grails.datastore.gorm.GormEntity
 import org.springframework.beans.factory.annotation.Value
@@ -14,7 +15,6 @@ import taack.solr.SolrFieldType
 import taack.solr.SolrSpecifier
 import taack.ui.dsl.UiBlockSpecifier
 
-import javax.annotation.PostConstruct
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes

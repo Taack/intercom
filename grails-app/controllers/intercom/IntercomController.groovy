@@ -10,7 +10,7 @@ import grails.gorm.transactions.Transactional
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.plugin.springsecurity.annotation.Secured
 import org.codehaus.groovy.runtime.MethodClosure as MC
-import taack.domain.TaackSaveService
+import taack.render.TaackSaveService
 import taack.render.TaackUiProgressBarService
 import taack.render.TaackUiService
 import taack.ui.dsl.*
