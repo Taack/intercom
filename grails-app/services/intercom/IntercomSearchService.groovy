@@ -3,13 +3,14 @@ package intercom
 
 import grails.compiler.GrailsCompileStatic
 import jakarta.annotation.PostConstruct
-import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.codehaus.groovy.runtime.MethodClosure
 import org.grails.datastore.gorm.GormEntity
 import org.springframework.beans.factory.annotation.Value
 import taack.app.TaackApp
 import taack.app.TaackAppRegisterService
 import taack.domain.TaackAttachmentService
+import taack.domain.TaackGormClass
+import taack.domain.TaackGormClassRegisterService
 import taack.domain.TaackSearchService
 import taack.solr.SolrFieldType
 import taack.solr.SolrSpecifier
@@ -52,9 +53,9 @@ class IntercomSearchService implements TaackSearchService.IIndexService {
     private void init() {
         TaackAppRegisterService.register(new TaackApp(IntercomController.&index as MethodClosure, new String(this.class.getResourceAsStream("/intercom/intercom.svg").readAllBytes())))
 
-        FileUtils.forceMkdir(txtRootPath.toFile())
+        txtRootPath.toFile().mkdirs()
 
-        taackSearchService.registerSolrSpecifier(this, new SolrSpecifier(IntercomRepoDoc, IntercomController.&viewDoc as MethodClosure, this.&labeling as MethodClosure, { IntercomRepoDoc d ->
+        taackSearchService.registerSolrSpecifier(this, new SolrSpecifier(IntercomRepoDoc, /*IntercomController.&viewDoc as MethodClosure, this.&labeling as MethodClosure,*/ { IntercomRepoDoc d ->
             d ?= new IntercomRepoDoc()
             String content = docTxtContent(d)
             if (content || !d.id) {
@@ -69,12 +70,16 @@ class IntercomSearchService implements TaackSearchService.IIndexService {
                 indexField SolrFieldType.POINT_STRING, "userCreated", 0.5f, true, d.userCreated?.username
             }
         }))
-    }
 
-    String labeling(Long id) {
-        def u = IntercomRepoDoc.read(id)
-        if (!u) return ''
-        "IntercomRepoDoc: ${u.baseFilePath} in ${u.intercomRepo.name} ($id) by ${u.userCreated.username}"
+        TaackGormClassRegisterService.register(new TaackGormClass(IntercomRepoDoc).builder
+                .setShowMethod(IntercomController.&viewDoc as MethodClosure)
+                .setShowLabel({ Long id ->
+                    def u = IntercomRepoDoc.read(id)
+                    if (!u) return ''
+                    "IntercomRepoDoc: ${u.baseFilePath} in ${u.intercomRepo.name} ($id) by ${u.userCreated.username}"
+                })
+                .build(),)
+
     }
 
     @Override

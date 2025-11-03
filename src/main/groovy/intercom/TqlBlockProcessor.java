@@ -17,6 +17,7 @@ import taack.jdbc.common.tql.gen.TDLLexer;
 import taack.jdbc.common.tql.gen.TDLParser;
 import taack.jdbc.common.tql.listener.TDLTranslator;
 import taack.jdbc.common.tql.listener.TQLTranslator;
+import taack.ui.dsl.diagram.DiagramOption;
 import taack.ui.dump.diagram.SvgDiagramRender;
 import taack.ui.dump.diagram.scene.BarDiagramScene;
 
@@ -194,7 +195,7 @@ class TqlBlockProcessor extends BlockProcessor {
         // when the third parameter is TRUE, the diagram width will auto-fit to 100% of section width by doing ZOOM. The zoom rate is "sectionWidth / ${firstParameter}"
         // when the third parameter is FALSE, the diagram width will be fixed to ${firstParameter}
         SvgDiagramRender render = new SvgDiagramRender(new BigDecimal("600.0"), new BigDecimal("300.0"), true);
-        BarDiagramScene scene = new BarDiagramScene(render, dataPerKey, true);
+        BarDiagramScene scene = new BarDiagramScene(render, dataPerKey, new DiagramOption.DiagramOptionBuilder().build(), false);
         scene.draw();
         return createBlock(parent, "pass", render.getRendered());
     }

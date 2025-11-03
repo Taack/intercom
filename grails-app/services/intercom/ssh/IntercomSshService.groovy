@@ -3,7 +3,6 @@ package intercom.ssh
 
 import grails.compiler.GrailsCompileStatic
 import jakarta.annotation.PostConstruct
-import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.springframework.beans.factory.annotation.Value
 import taack.ast.type.FieldInfo
 import taack.domain.TaackJdbcService
@@ -44,7 +43,7 @@ final class IntercomSshService implements SshEventRegistry.VfsEvent {
     @PostConstruct
     def initVfs() {
         log.info "IntercomSshService::initVfs +++"
-        FileUtils.forceMkdir(new File(tmpUploadFolder.toString()))
+        new File(tmpUploadFolder.toString()).mkdirs()
         try {
             Files.delete(codeGeneratedQueriesPath)
         } catch (e) {

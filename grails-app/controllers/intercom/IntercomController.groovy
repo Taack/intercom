@@ -129,7 +129,8 @@ class IntercomController {
             }, buildMenu())
         } else {
             def prez = intercomAsciidoctorConverterService.retrieveIndexFile(doc)
-            taackUiService.showView('/intercom/asciidocInline', [pageAsciidocContent: prez.text], buildMenu())
+            // TODO: fix later
+            //  taackUiService.showView('/intercom/asciidocInline', [pageAsciidocContent: prez.text], buildMenu())
         }
     }
 

@@ -4,10 +4,9 @@ import grails.compiler.GrailsCompileStatic
 import intercom.IntercomRepo
 import intercom.IntercomUser
 import jakarta.annotation.PostConstruct
-import org.apache.tomcat.util.http.fileupload.FileUtils
-import org.springframework.beans.factory.annotation.Value
 import taack.ssh.SshEventRegistry
 import crew.User
+import taack.ui.TaackUiConfiguration
 
 
 @GrailsCompileStatic
@@ -15,17 +14,14 @@ class IntercomGitRepoRegisterService implements SshEventRegistry.UserGitRepoChec
 
     static lazyInit = false
 
-    @Value('${intranet.root}')
-    String intranetRoot
-
     String getGitRootPath() {
-        intranetRoot + '/intercom/git-root'
+        TaackUiConfiguration.root + '/intercom/git-root'
     }
 
     @PostConstruct
     def initVfs() {
         log.info "Init Intercom Git Starts"
-        FileUtils.forceMkdir(new File(gitRootPath))
+        new File(gitRootPath).mkdirs()
         SshEventRegistry.GitHelper.registerUserGitRepoChecker(this)
         log.info "Init Intercom Git Ends"
     }

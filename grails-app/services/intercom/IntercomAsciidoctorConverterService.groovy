@@ -4,7 +4,6 @@ import grails.compiler.GrailsCompileStatic
 import grails.gorm.transactions.Transactional
 import grails.util.Triple
 import jakarta.annotation.PostConstruct
-import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.asciidoctor.*
 import org.asciidoctor.ast.Document
 import org.asciidoctor.extension.Preprocessor
@@ -16,30 +15,22 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.PullResult
 import org.eclipse.jgit.lib.PersonIdent
 import org.eclipse.jgit.revwalk.RevCommit
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import taack.domain.TaackJdbcService
 import taack.ui.TaackUiConfiguration
-
 
 @GrailsCompileStatic
 class IntercomAsciidoctorConverterService {
 
     TaackJdbcService taackJdbcService
 
-    @Value('${intranet.root}')
-    String intranetRoot
-
     String getGitRootPath() {
-        intranetRoot + '/intercom/git-root'
+        TaackUiConfiguration.root + '/intercom/git-root'
     }
 
     String getAsciidocPath() {
-        intranetRoot + '/intercom/asciidoc'
+        TaackUiConfiguration.root + '/intercom/asciidoc'
     }
-
-    @Autowired
-    TaackUiConfiguration taackUiConfiguration
 
     @Value('${exe.vega.bin}')
     String vegaBinPath
@@ -48,9 +39,9 @@ class IntercomAsciidoctorConverterService {
 
     @PostConstruct
     private void init() {
-        FileUtils.forceMkdir(new File(gitRootPath))
-        FileUtils.forceMkdir(new File(asciidocPath + '/in'))
-        FileUtils.forceMkdir(new File(asciidocPath + '/out'))
+        new File(gitRootPath).mkdirs()
+        new File(asciidocPath + '/in').mkdirs()
+        new File(asciidocPath + '/out').mkdirs()
         initAsciidoctorJ()
     }
 
@@ -321,8 +312,8 @@ class IntercomAsciidoctorConverterService {
 
             html << bodyHtml
         } else {
-            attributes.attribute("pdf-theme", "${taackUiConfiguration.root}/pdf/asciidoctor-pdf-themes/citel.yml" as String)
-                    .attribute("pdf-fontsdir", "${taackUiConfiguration.root}/pdf/fonts;GEM_FONTS_DIR" as String)
+            attributes.attribute("pdf-theme", "${TaackUiConfiguration.root}/pdf/asciidoctor-pdf-themes/citel.yml" as String)
+                    .attribute("pdf-fontsdir", "${TaackUiConfiguration.root}/pdf/fonts;GEM_FONTS_DIR" as String)
                     .attribute("webimagesdir", contentTree + '/')
                     .attribute("source-highlighter", "rouge")
 
